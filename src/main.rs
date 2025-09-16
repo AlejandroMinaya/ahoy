@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use crossterm::event::{self, Event};
 use ratatui::{
     self, Frame,
+    layout::{self, Constraint, Direction, Layout},
     widgets::canvas::{Canvas, Map, Rectangle},
 };
 
@@ -17,19 +18,23 @@ fn render(frame: &mut Frame) {
     let area = frame.area();
     let area_width = f64::from(area.width);
     let area_height = f64::from(area.height);
-    let rectangle_width = 10.0;
-    let rectangle_height = 5.0;
+    let rectangle_width = 1.0;
+    let rectangle_height = 1.0;
     frame.render_widget(
         Canvas::default()
             .marker(ratatui::symbols::Marker::Block)
             .paint(|ctx| {
-                ctx.draw(&Rectangle {
-                    x: (area_width - rectangle_width) / 2.0,
-                    y: (area_height - rectangle_height) / 2.0,
-                    width: rectangle_width,
-                    height: rectangle_height,
-                    color: ratatui::style::Color::Yellow,
-                });
+                for i in 0..64 {
+                    for j in 0..32 {
+                        ctx.draw(&Rectangle {
+                            x: f64::from(i) * rectangle_width,
+                            y: area_height - rectangle_height - (rectangle_height * f64::from(j)),
+                            width: rectangle_width,
+                            height: rectangle_height,
+                            color: ratatui::style::Color::White,
+                        });
+                    }
+                }
             })
             .x_bounds([0.0, area_width])
             .y_bounds([0.0, area_height]),
