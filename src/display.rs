@@ -24,12 +24,25 @@ impl Drop for RatatuiAhoyDisplay {
         ratatui::restore();
     }
 }
+struct Size {
+    width: f64,
+    height: f64,
+}
+impl Size {
+    fn new(width: f64, height: f64) -> Self {
+        Self { width, height }
+    }
+}
+
 impl AhoyDisplay for RatatuiAhoyDisplay {
     fn draw(&mut self, frame: &Frame) -> anyhow::Result<()> {
-        self.terminal.draw(|ratatui_frame| {
+        let rectangle_size = Size::new(1_f64, 1_f64);
+        let display_size = Size::new(
+            64_f64 * rectangle_size.width,
+            32_f64 * rectangle_size.height,
+        );
+        let canvas_width = self.terminal.draw(|ratatui_frame| {
             let area = ratatui_frame.area();
-            let area_width = f64::from(area.width);
-            let area_height = f64::from(area.height);
             ratatui_frame.render_widget(
                 Canvas::default()
                     .marker(ratatui::symbols::Marker::HalfBlock)
@@ -39,10 +52,10 @@ impl AhoyDisplay for RatatuiAhoyDisplay {
                                 let row = 31_usize - usize::from(i);
                                 let pixel = frame[row] >> (63 - j);
                                 ctx.draw(&Rectangle {
-                                    y: f64::from(i),
-                                    x: f64::from(j),
-                                    width: 1.0,
-                                    height: 1.0,
+                                    y: (rectangle_size.height * i as f64),
+                                    x: (rectangle_size.width * j as f64),
+                                    width: rectangle_size.width,
+                                    height: rectangle_size.height,
                                     color: if pixel & 0b1 == 1 {
                                         Color::White
                                     } else {
@@ -52,8 +65,8 @@ impl AhoyDisplay for RatatuiAhoyDisplay {
                             }
                         }
                     })
-                    .x_bounds([0.0, 64.0])
-                    .y_bounds([0.0, 32.0]),
+                    .x_bounds([0.0, display_size.width])
+                    .y_bounds([0.0, display_size.height]),
                 area,
             );
         })?;
