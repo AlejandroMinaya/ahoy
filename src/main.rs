@@ -1,8 +1,10 @@
+mod display;
+
 use std::path::PathBuf;
 
 use crossterm::event::{self, Event};
 use ratatui::{
-    self, Frame,
+    self,
     style::Color,
     widgets::canvas::{Canvas, Rectangle},
 };
@@ -14,9 +16,9 @@ struct Args {
     #[arg()]
     program: PathBuf,
 }
-const ALL_PIXELS: [u64; 32] = [0; 32];
+const ALL_PIXELS: crate::display::Frame = [0; 32];
 
-fn render(frame: &mut Frame) {
+fn render(frame: &mut ratatui::Frame) {
     let area = frame.area();
     let area_width = f64::from(area.width);
     let area_height = f64::from(area.height);
