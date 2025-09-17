@@ -39,8 +39,8 @@ impl AhoyDisplay for RatatuiAhoyDisplay {
                                 let row = 31_usize - usize::from(i);
                                 let pixel = frame[row] >> (63 - j);
                                 ctx.draw(&Rectangle {
-                                    y: f64::from(i),
-                                    x: f64::from(j),
+                                    y: f64::from(i) + (area_height - 32.0) / 2.0,
+                                    x: f64::from(j) + (area_width - 64.0) / 2.0,
                                     width: 1.0,
                                     height: 1.0,
                                     color: if pixel & 0b1 == 1 {
