@@ -32,11 +32,25 @@ impl Size {
     fn new(width: f64, height: f64) -> Self {
         Self { width, height }
     }
+    fn scale(self, factor: f64) -> Self {
+        Self {
+            width: self.width * factor,
+            height: self.height * factor,
+        }
+    }
+}
+impl Default for Size {
+    fn default() -> Self {
+        Self {
+            width: 1.0,
+            height: 1.0,
+        }
+    }
 }
 
 impl AhoyDisplay for RatatuiAhoyDisplay {
     fn draw(&mut self, frame: &Frame) -> anyhow::Result<()> {
-        let rectangle_size = Size::new(1_f64, 1_f64);
+        let rectangle_size = Size::default().scale(10.0);
         let display_size = Size::new(
             64_f64 * rectangle_size.width,
             32_f64 * rectangle_size.height,
@@ -45,7 +59,7 @@ impl AhoyDisplay for RatatuiAhoyDisplay {
             let area = ratatui_frame.area();
             ratatui_frame.render_widget(
                 Canvas::default()
-                    .marker(ratatui::symbols::Marker::HalfBlock)
+                    .marker(ratatui::symbols::Marker::Braille)
                     .paint(|ctx| {
                         for i in 0..32_u8 {
                             for j in 0..64_u8 {
