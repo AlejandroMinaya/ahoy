@@ -9,7 +9,7 @@ pub trait AhoyDisplay {
     fn draw(&mut self, frame: &Frame) -> anyhow::Result<()>;
 }
 
-struct RatatuiAhoyDisplay {
+pub struct RatatuiAhoyDisplay {
     terminal: ratatui::DefaultTerminal,
 }
 impl Default for RatatuiAhoyDisplay {
@@ -32,16 +32,18 @@ impl AhoyDisplay for RatatuiAhoyDisplay {
             let area_height = f64::from(area.height);
             ratatui_frame.render_widget(
                 Canvas::default()
-                    .marker(ratatui::symbols::Marker::Dot)
+                    .marker(ratatui::symbols::Marker::Block)
                     .paint(|ctx| {
                         for i in 0..32_u8 {
                             for j in 0..64_u8 {
+                                let row = 31_usize - usize::from(i);
+                                let pixel = frame[row] >> (63 - j);
                                 ctx.draw(&Rectangle {
-                                    y: area_height - 1.0 - (1.0 * f64::from(i)),
+                                    y: f64::from(i),
                                     x: f64::from(j),
                                     width: 1.0,
                                     height: 1.0,
-                                    color: if (frame[usize::from(i)] >> j) & 0b1 == 1 {
+                                    color: if pixel & 0b1 == 1 {
                                         Color::White
                                     } else {
                                         Color::Black
