@@ -55,11 +55,11 @@ impl AhoyDisplay for RatatuiAhoyDisplay {
             64_f64 * rectangle_size.width,
             32_f64 * rectangle_size.height,
         );
-        let canvas_width = self.terminal.draw(|ratatui_frame| {
+        self.terminal.draw(|ratatui_frame| {
             let area = ratatui_frame.area();
             ratatui_frame.render_widget(
                 Canvas::default()
-                    .marker(ratatui::symbols::Marker::Braille)
+                    .marker(ratatui::symbols::Marker::Dot)
                     .paint(|ctx| {
                         for i in 0..32_u8 {
                             for j in 0..64_u8 {
