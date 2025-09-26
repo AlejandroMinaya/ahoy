@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use std::io::BufRead;
+use std::{collections::VecDeque, io::BufRead};
 
 const PROGRAM_MEMORY_START: usize = 0x200;
 const AVAILABLE_PROGRAM_MEMORY: usize = 0x1000 - PROGRAM_MEMORY_START;
@@ -11,19 +11,20 @@ const FONT: [u8; 80] = [
     0xF0, 0xE0, 0x90, 0x90, 0x90, 0xE0, 0xF0, 0x80, 0xF0, 0x80, 0xF0, 0xF0, 0x80, 0xF0, 0x80, 0x80,
 ];
 
-struct Chip8 {
+pub struct Ahoy {
     memory: [u8; 4096],
     index: u16,
     counter: u16,
+    stack: VecDeque<u16>,
 }
 
-impl Chip8 {
+impl Ahoy {
     fn new() -> Self {
         let mut memory = [0; 4096];
 
         memory[0x050..=0x09F].copy_from_slice(&FONT);
 
-        Chip8 {
+        Ahoy {
             memory,
             index: 0,
             counter: 0,
@@ -57,11 +58,11 @@ impl Chip8 {
 mod tests {
     use std::io::{BufReader, Cursor};
 
-    use crate::Chip8;
+    use crate::Ahoy;
 
     #[test]
     fn load_normal_program() {
-        let mut chip8 = Chip8::new();
+        let mut chip8 = Ahoy::new();
         let mut program_reader = BufReader::new(Cursor::new([
             0x01_u8, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
         ]));
@@ -82,7 +83,7 @@ mod tests {
 
     #[test]
     fn load_returns_error_for_empty_file() {
-        let mut chip8 = Chip8::new();
+        let mut chip8 = Ahoy::new();
         let mut program_reader = BufReader::new(Cursor::new([]));
 
         chip8
@@ -92,7 +93,7 @@ mod tests {
 
     #[test]
     fn load_returns_error_for_larger_than_buffer_file() {
-        let mut chip8 = Chip8::new();
+        let mut chip8 = Ahoy::new();
         let mut program_reader = BufReader::new(Cursor::new([1u8; 4096]));
 
         chip8
