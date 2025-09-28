@@ -10,17 +10,22 @@ const FONT: [u8; 80] = [
     0x10, 0xF0, 0xF0, 0x90, 0xF0, 0x90, 0x90, 0xE0, 0x90, 0xE0, 0x90, 0xE0, 0xF0, 0x80, 0x80, 0x80,
     0xF0, 0xE0, 0x90, 0x90, 0x90, 0xE0, 0xF0, 0x80, 0xF0, 0x80, 0xF0, 0xF0, 0x80, 0xF0, 0x80, 0x80,
 ];
+type AhoyInstruction = u16;
+
+const MEMORY_CAPACITY: usize = 0x1000;
 
 pub struct Ahoy {
-    memory: [u8; 4096],
+    memory: [u8; MEMORY_CAPACITY],
     index: u16,
     counter: u16,
     stack: VecDeque<u16>,
+    delay_timer: u8,
+    sound_timer: u8,
 }
 
 impl Ahoy {
     fn new() -> Self {
-        let mut memory = [0; 4096];
+        let mut memory = [0; MEMORY_CAPACITY];
 
         memory[0x050..=0x09F].copy_from_slice(&FONT);
 
@@ -28,9 +33,13 @@ impl Ahoy {
             memory,
             index: 0,
             counter: 0,
+            stack: VecDeque::with_capacity(256),
+            delay_timer: 0,
+            sound_timer: 0,
         }
     }
-    fn load<R: BufRead>(&mut self, program_reader: &mut R) -> anyhow::Result<()> {
+
+    pub fn load<R: BufRead>(&mut self, program_reader: &mut R) -> anyhow::Result<()> {
         let mut total_bytes_read = 0_usize;
 
         while let Ok(curr_bytes_read) =
@@ -51,6 +60,18 @@ impl Ahoy {
         }
 
         Ok(())
+    }
+
+    fn fetch(&mut self) -> AhoyInstruction {
+        let usize_counter = self.counter as usize;
+
+        let first_nibble: u16 = self.memory[usize_counter].into();
+        let second_nibble: u16 = self.memory[usize_counter + 1].into();
+
+        let instruction = (first_nibble << 8) | second_nibble;
+
+        self.counter = (self.counter + 2) % (MEMORY_CAPACITY as u16);
+        instruction
     }
 }
 
@@ -99,5 +120,48 @@ mod tests {
         chip8
             .load(&mut program_reader)
             .expect_err("Expected large program to raise error");
+    }
+
+    #[test]
+    fn fetch_increments_program_counter_by_two() {
+        let mut chip8 = Ahoy::new();
+
+        chip8.fetch();
+        assert_eq!(chip8.counter, 2u16);
+        chip8.fetch();
+        assert_eq!(chip8.counter, 4u16);
+    }
+
+    #[test]
+    fn fetch_loops_back_program_counter_to_zero_when_overflowing_12bits() {
+        let mut chip8 = Ahoy::new();
+        chip8.counter = 4094;
+
+        chip8.fetch();
+        assert_eq!(chip8.counter, 0);
+        chip8.fetch();
+        assert_eq!(chip8.counter, 2);
+    }
+    #[test]
+    fn fetch_retrieves_expected_bytes_from_memory_beginning() {
+        let mut chip8 = Ahoy::new();
+        chip8.memory[0..2].copy_from_slice(&[0xF0, 0x0F]);
+
+        let expected_instruction = 0xF00F;
+
+        let actual_instruction = chip8.fetch();
+        assert_eq!(expected_instruction, actual_instruction);
+    }
+
+    #[test]
+    fn fetch_retrieves_expected_bytes_from_arbitrary_position() {
+        let mut chip8 = Ahoy::new();
+        chip8.counter = 0x6F;
+        chip8.memory[0x6F..0x73].copy_from_slice(&[0xAB, 0xBC, 0xCD, 0xDE]);
+
+        let expected_instruction = 0xABBC;
+        let actual_instruction = chip8.fetch();
+
+        assert_eq!(expected_instruction, actual_instruction);
     }
 }
