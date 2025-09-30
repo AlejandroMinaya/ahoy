@@ -4,6 +4,7 @@ enum AhoyInstruction {
     ClearScreen = 0x00E0,
     Jump(u16),
     SetRegister { register: u8, value: u8 },
+    AddToRegister { register: u8, value: u8 },
     UnknownInstruction,
 }
 impl From<u16> for AhoyInstruction {
@@ -15,6 +16,13 @@ impl From<u16> for AhoyInstruction {
                 6 => {
                     let payload = instruction & 0x0FFF;
                     Self::SetRegister {
+                        register: (payload >> 8) as u8,
+                        value: (payload & 0x0FF) as u8,
+                    }
+                }
+                7 => {
+                    let payload = instruction & 0x0FFF;
+                    Self::AddToRegister {
                         register: (payload >> 8) as u8,
                         value: (payload & 0x0FF) as u8,
                     }
@@ -31,19 +39,19 @@ mod tests {
     use crate::instructions::*;
 
     #[test]
-    fn from_decodes_static_instructions() {
+    fn decode_static_instructions() {
         assert!(matches!(0x00E0.into(), AhoyInstruction::ClearScreen));
     }
 
     #[test]
-    fn from_decode_jump_instruction() {
+    fn decode_jump_instruction() {
         assert!(matches!(0x1FE0.into(), AhoyInstruction::Jump(0xFE0)));
         assert!(matches!(0x1ABC.into(), AhoyInstruction::Jump(0xABC)));
         assert!(matches!(0x1000.into(), AhoyInstruction::Jump(0x000)));
     }
 
     #[test]
-    fn from_decode_set_register_instruction() {
+    fn decode_set_register_instruction() {
         assert!(matches!(
             0x6FE0.into(),
             AhoyInstruction::SetRegister {
@@ -63,6 +71,31 @@ mod tests {
             AhoyInstruction::SetRegister {
                 register: 0xA,
                 value: 0x00
+            }
+        ));
+    }
+
+    #[test]
+    fn decode_add_value_to_register_instruction() {
+        assert!(matches!(
+            0x7808.into(),
+            AhoyInstruction::AddToRegister {
+                register: 0x8,
+                value: 0x8
+            }
+        ));
+        assert!(matches!(
+            0x7D1E.into(),
+            AhoyInstruction::AddToRegister {
+                register: 0xD,
+                value: 0x1E
+            }
+        ));
+        assert!(matches!(
+            0x7BEE.into(),
+            AhoyInstruction::AddToRegister {
+                register: 0xB,
+                value: 0xEE
             }
         ));
     }
