@@ -1,10 +1,25 @@
+#[derive(Debug)]
+struct RegisterInstruction {
+    register: u8,
+    value: u8,
+}
+impl From<u16> for RegisterInstruction {
+    fn from(value: u16) -> Self {
+        let instruction = value & 0x0FFF;
+        Self {
+            register: (instruction >> 8) as u8,
+            value: (instruction & 0x0FF) as u8,
+        }
+    }
+}
+
 #[repr(u16)]
 #[derive(Debug)]
 enum AhoyInstruction {
     ClearScreen = 0x00E0,
     Jump(u16),
-    SetRegister { register: u8, value: u8 },
-    AddToRegister { register: u8, value: u8 },
+    SetRegister(RegisterInstruction),
+    AddToRegister(RegisterInstruction),
     UnknownInstruction,
 }
 impl From<u16> for AhoyInstruction {
@@ -13,21 +28,8 @@ impl From<u16> for AhoyInstruction {
             0x00E0 => Self::ClearScreen,
             instruction => match instruction >> 0xC {
                 1 => Self::Jump(instruction & 0x0FFF),
-                6 => {
-                    let payload = instruction & 0x0FFF;
-                    Self::SetRegister {
-                        register: (payload >> 8) as u8,
-                        value: (payload & 0x0FF) as u8,
-                    }
-                }
-                7 => {
-                    let payload = instruction & 0x0FFF;
-                    Self::AddToRegister {
-                        register: (payload >> 8) as u8,
-                        value: (payload & 0x0FF) as u8,
-                    }
-                }
-
+                6 => Self::SetRegister(RegisterInstruction::from(instruction)),
+                7 => Self::AddToRegister(RegisterInstruction::from(instruction)),
                 _ => Self::UnknownInstruction,
             },
         }
@@ -54,24 +56,24 @@ mod tests {
     fn decode_set_register_instruction() {
         assert!(matches!(
             0x6FE0.into(),
-            AhoyInstruction::SetRegister {
+            AhoyInstruction::SetRegister(RegisterInstruction {
                 register: 0xF,
                 value: 0xE0
-            }
+            })
         ));
         assert!(matches!(
             0x6EEE.into(),
-            AhoyInstruction::SetRegister {
+            AhoyInstruction::SetRegister(RegisterInstruction {
                 register: 0xE,
                 value: 0xEE
-            }
+            })
         ));
         assert!(matches!(
             0x6A00.into(),
-            AhoyInstruction::SetRegister {
+            AhoyInstruction::SetRegister(RegisterInstruction {
                 register: 0xA,
                 value: 0x00
-            }
+            })
         ));
     }
 
@@ -79,24 +81,24 @@ mod tests {
     fn decode_add_value_to_register_instruction() {
         assert!(matches!(
             0x7808.into(),
-            AhoyInstruction::AddToRegister {
+            AhoyInstruction::AddToRegister(RegisterInstruction {
                 register: 0x8,
                 value: 0x8
-            }
+            })
         ));
         assert!(matches!(
             0x7D1E.into(),
-            AhoyInstruction::AddToRegister {
+            AhoyInstruction::AddToRegister(RegisterInstruction {
                 register: 0xD,
                 value: 0x1E
-            }
+            })
         ));
         assert!(matches!(
             0x7BEE.into(),
-            AhoyInstruction::AddToRegister {
+            AhoyInstruction::AddToRegister(RegisterInstruction {
                 register: 0xB,
                 value: 0xEE
-            }
+            })
         ));
     }
 }
