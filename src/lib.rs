@@ -1,3 +1,5 @@
+mod instructions;
+
 use anyhow::anyhow;
 use std::{collections::VecDeque, io::BufRead};
 
@@ -11,22 +13,6 @@ const FONT: [u8; 80] = [
     0x10, 0xF0, 0xF0, 0x90, 0xF0, 0x90, 0x90, 0xE0, 0x90, 0xE0, 0x90, 0xE0, 0xF0, 0x80, 0x80, 0x80,
     0xF0, 0xE0, 0x90, 0x90, 0x90, 0xE0, 0xF0, 0x80, 0xF0, 0x80, 0xF0, 0xF0, 0x80, 0xF0, 0x80, 0x80,
 ];
-
-#[derive(Debug)]
-struct JumpInstruction(u16);
-
-#[repr(u16)]
-#[derive(Debug)]
-enum AhoyInstruction {
-    ClearScreen = 0x00E0,
-    Jump(JumpInstruction),
-    UnknownInstruction,
-}
-impl From<u16> for AhoyInstruction {
-    fn from(value: u16) -> Self {
-        Self::UnknownInstruction
-    }
-}
 
 pub struct Ahoy {
     memory: [u8; MAX_MEMORY],
@@ -87,17 +73,13 @@ impl Ahoy {
         self.counter = (self.counter + 2) % (MAX_MEMORY as u16);
         instruction
     }
-
-    fn decode(&self, instruction: u16) -> AhoyInstruction {
-        instruction.into()
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::io::{BufReader, Cursor};
 
-    use crate::{Ahoy, AhoyInstruction};
+    use crate::Ahoy;
 
     #[test]
     fn load_normal_program() {
@@ -181,12 +163,5 @@ mod tests {
         let actual_instruction = chip8.fetch();
 
         assert_eq!(expected_instruction, actual_instruction);
-    }
-
-    #[test]
-    fn decode_identifies_the_instruction_by_the_first_nibble() {
-        let chip8 = Ahoy::new();
-
-        assert!(matches!(chip8.decode(0x00E0), AhoyInstruction::ClearScreen));
     }
 }
