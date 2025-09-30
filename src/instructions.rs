@@ -8,9 +8,11 @@ enum AhoyInstruction {
 impl From<u16> for AhoyInstruction {
     fn from(value: u16) -> Self {
         match value {
-            instruction if instruction >> 0xC == 1 => Self::Jump(instruction & 0x0FFF),
             0x00E0 => Self::ClearScreen,
-            _ => Self::UnknownInstruction,
+            instruction => match instruction >> 0xC {
+                1 => Self::Jump(instruction & 0x0FFF),
+                _ => Self::UnknownInstruction,
+            },
         }
     }
 }
