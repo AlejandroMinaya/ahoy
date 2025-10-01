@@ -42,8 +42,8 @@ impl From<u16> for AhoyInstruction {
                 7 => Self::AddToRegister(RegisterInstruction::from(instruction)),
                 0xA => Self::SetIndex(instruction & 0x0FFF),
                 0xD => Self::Display {
-                    x_register: ((instruction & 0xF00) >> 8) as u8,
-                    y_register: ((instruction & 0xF0) >> 4) as u8,
+                    x_register: ((instruction >> 8) & 0xF) as u8,
+                    y_register: ((instruction >> 4) & 0xF) as u8,
                     sprite_height: (instruction & 0xF) as u8,
                 },
                 _ => Self::UnknownInstruction,
