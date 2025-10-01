@@ -16,13 +16,18 @@ impl From<u16> for RegisterInstruction {
 #[repr(u16)]
 #[derive(Debug)]
 enum AhoyInstruction {
-    ClearScreen = 0x00E0,
-    StopSubroutine = 0x00EE,
     Jump(u16),
     CallSubroutine(u16),
     SetRegister(RegisterInstruction),
     AddToRegister(RegisterInstruction),
     SetIndex(u16),
+    Display {
+        x_register: u8,
+        y_register: u8,
+        sprite_height: u8,
+    },
+    ClearScreen = 0x00E0,
+    StopSubroutine = 0x00EE,
     UnknownInstruction,
 }
 impl From<u16> for AhoyInstruction {
@@ -35,7 +40,12 @@ impl From<u16> for AhoyInstruction {
                 2 => Self::CallSubroutine(instruction & 0x0FFF),
                 6 => Self::SetRegister(RegisterInstruction::from(instruction)),
                 7 => Self::AddToRegister(RegisterInstruction::from(instruction)),
-                10 => Self::SetIndex(instruction & 0x0FFF),
+                0xA => Self::SetIndex(instruction & 0x0FFF),
+                0xD => Self::Display {
+                    x_register: ((instruction & 0xF00) >> 8) as u8,
+                    y_register: ((instruction & 0xF0) >> 4) as u8,
+                    sprite_height: (instruction & 0xF) as u8,
+                },
                 _ => Self::UnknownInstruction,
             },
         }
@@ -130,5 +140,33 @@ mod tests {
         assert!(matches!(0xAFE0.into(), AhoyInstruction::SetIndex(0xFE0)));
         assert!(matches!(0xAABC.into(), AhoyInstruction::SetIndex(0xABC)));
         assert!(matches!(0xA000.into(), AhoyInstruction::SetIndex(0x000)));
+    }
+
+    #[test]
+    fn decode_display_instruction() {
+        assert!(matches!(
+            0xDFE0.into(),
+            AhoyInstruction::Display {
+                x_register: 0xF,
+                y_register: 0xE,
+                sprite_height: 0
+            }
+        ));
+        assert!(matches!(
+            0xDABC.into(),
+            AhoyInstruction::Display {
+                x_register: 0xA,
+                y_register: 0xB,
+                sprite_height: 0xC
+            }
+        ));
+        assert!(matches!(
+            0xD108.into(),
+            AhoyInstruction::Display {
+                x_register: 1,
+                y_register: 0,
+                sprite_height: 8
+            }
+        ));
     }
 }
