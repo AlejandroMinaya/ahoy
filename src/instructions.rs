@@ -18,6 +18,7 @@ impl From<u16> for RegisterInstruction {
 enum AhoyInstruction {
     ClearScreen = 0x00E0,
     Jump(u16),
+    RunSubroutine(u16),
     SetRegister(RegisterInstruction),
     AddToRegister(RegisterInstruction),
     UnknownInstruction,
@@ -28,6 +29,7 @@ impl From<u16> for AhoyInstruction {
             0x00E0 => Self::ClearScreen,
             instruction => match instruction >> 0xC {
                 1 => Self::Jump(instruction & 0x0FFF),
+                2 => Self::RunSubroutine(instruction & 0x0FFF),
                 6 => Self::SetRegister(RegisterInstruction::from(instruction)),
                 7 => Self::AddToRegister(RegisterInstruction::from(instruction)),
                 _ => Self::UnknownInstruction,
@@ -99,6 +101,22 @@ mod tests {
                 register: 0xB,
                 value: 0xEE
             })
+        ));
+    }
+
+    #[test]
+    fn decode_run_subroutine_instruction() {
+        assert!(matches!(
+            0x2FE0.into(),
+            AhoyInstruction::RunSubroutine(0xFE0)
+        ));
+        assert!(matches!(
+            0x2ABC.into(),
+            AhoyInstruction::RunSubroutine(0xABC)
+        ));
+        assert!(matches!(
+            0x2000.into(),
+            AhoyInstruction::RunSubroutine(0x000)
         ));
     }
 }
