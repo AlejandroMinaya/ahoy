@@ -17,6 +17,7 @@ impl From<u16> for RegisterInstruction {
 #[derive(Debug)]
 enum AhoyInstruction {
     ClearScreen = 0x00E0,
+    StopSubroutine = 0x00EE,
     Jump(u16),
     CallSubroutine(u16),
     SetRegister(RegisterInstruction),
@@ -27,6 +28,7 @@ impl From<u16> for AhoyInstruction {
     fn from(value: u16) -> Self {
         match value {
             0x00E0 => Self::ClearScreen,
+            0x00EE => Self::StopSubroutine,
             instruction => match instruction >> 0xC {
                 1 => Self::Jump(instruction & 0x0FFF),
                 2 => Self::CallSubroutine(instruction & 0x0FFF),
@@ -45,6 +47,7 @@ mod tests {
     #[test]
     fn decode_static_instructions() {
         assert!(matches!(0x00E0.into(), AhoyInstruction::ClearScreen));
+        assert!(matches!(0x00EE.into(), AhoyInstruction::StopSubroutine));
     }
 
     #[test]
