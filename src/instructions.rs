@@ -22,6 +22,7 @@ enum AhoyInstruction {
     CallSubroutine(u16),
     SetRegister(RegisterInstruction),
     AddToRegister(RegisterInstruction),
+    SetIndex(u16),
     UnknownInstruction,
 }
 impl From<u16> for AhoyInstruction {
@@ -34,6 +35,7 @@ impl From<u16> for AhoyInstruction {
                 2 => Self::CallSubroutine(instruction & 0x0FFF),
                 6 => Self::SetRegister(RegisterInstruction::from(instruction)),
                 7 => Self::AddToRegister(RegisterInstruction::from(instruction)),
+                10 => Self::SetIndex(instruction & 0x0FFF),
                 _ => Self::UnknownInstruction,
             },
         }
@@ -121,5 +123,12 @@ mod tests {
             0x2000.into(),
             AhoyInstruction::CallSubroutine(0x000)
         ));
+    }
+
+    #[test]
+    fn decode_set_index_instruction() {
+        assert!(matches!(0xAFE0.into(), AhoyInstruction::SetIndex(0xFE0)));
+        assert!(matches!(0xAABC.into(), AhoyInstruction::SetIndex(0xABC)));
+        assert!(matches!(0xA000.into(), AhoyInstruction::SetIndex(0x000)));
     }
 }
