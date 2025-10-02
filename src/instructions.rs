@@ -34,6 +34,7 @@ enum AhoyInstruction {
 }
 impl AhoyInstruction {
     pub fn execute(&self, ahoy: &mut Ahoy) -> anyhow::Result<()> {
+        ahoy.current_frame = [0; 32];
         Ok(())
     }
 }
