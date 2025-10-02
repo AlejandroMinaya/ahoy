@@ -1,8 +1,11 @@
+mod instructions;
+
 use anyhow::anyhow;
 use std::{collections::VecDeque, io::BufRead};
 
 const PROGRAM_MEMORY_START: usize = 0x200;
-const AVAILABLE_PROGRAM_MEMORY: usize = 0x1000 - PROGRAM_MEMORY_START;
+const MAX_MEMORY: usize = 0x1000;
+const AVAILABLE_PROGRAM_MEMORY: usize = MAX_MEMORY - PROGRAM_MEMORY_START;
 const FONT: [u8; 80] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, 0x20, 0x60, 0x20, 0x20, 0x70, 0xF0, 0x10, 0xF0, 0x80, 0xF0, 0xF0,
     0x10, 0xF0, 0x10, 0xF0, 0x90, 0x90, 0xF0, 0x10, 0x10, 0xF0, 0x80, 0xF0, 0x10, 0xF0, 0xF0, 0x80,
@@ -10,12 +13,9 @@ const FONT: [u8; 80] = [
     0x10, 0xF0, 0xF0, 0x90, 0xF0, 0x90, 0x90, 0xE0, 0x90, 0xE0, 0x90, 0xE0, 0xF0, 0x80, 0x80, 0x80,
     0xF0, 0xE0, 0x90, 0x90, 0x90, 0xE0, 0xF0, 0x80, 0xF0, 0x80, 0xF0, 0xF0, 0x80, 0xF0, 0x80, 0x80,
 ];
-type AhoyInstruction = u16;
-
-const MEMORY_CAPACITY: usize = 0x1000;
 
 pub struct Ahoy {
-    memory: [u8; MEMORY_CAPACITY],
+    memory: [u8; MAX_MEMORY],
     index: u16,
     counter: u16,
     stack: VecDeque<u16>,
@@ -25,7 +25,7 @@ pub struct Ahoy {
 
 impl Ahoy {
     fn new() -> Self {
-        let mut memory = [0; MEMORY_CAPACITY];
+        let mut memory = [0; MAX_MEMORY];
 
         memory[0x050..=0x09F].copy_from_slice(&FONT);
 
@@ -62,7 +62,7 @@ impl Ahoy {
         Ok(())
     }
 
-    fn fetch(&mut self) -> AhoyInstruction {
+    fn fetch(&mut self) -> u16 {
         let usize_counter = self.counter as usize;
 
         let first_nibble: u16 = self.memory[usize_counter].into();
@@ -70,7 +70,7 @@ impl Ahoy {
 
         let instruction = (first_nibble << 8) | second_nibble;
 
-        self.counter = (self.counter + 2) % (MEMORY_CAPACITY as u16);
+        self.counter = (self.counter + 2) % (MAX_MEMORY as u16);
         instruction
     }
 }
