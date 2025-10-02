@@ -1,3 +1,5 @@
+use crate::Ahoy;
+
 #[derive(Debug)]
 struct RegisterInstruction {
     register: u8,
@@ -29,6 +31,11 @@ enum AhoyInstruction {
     ClearScreen = 0x00E0,
     StopSubroutine = 0x00EE,
     UnknownInstruction,
+}
+impl AhoyInstruction {
+    pub fn execute(&self, ahoy: &mut Ahoy) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 impl From<u16> for AhoyInstruction {
     fn from(value: u16) -> Self {
@@ -168,5 +175,19 @@ mod tests {
                 sprite_height: 8
             }
         ));
+    }
+
+    #[test]
+    fn clear_screen_sets_frame_to_zeroes() {
+        let mut ahoy = Ahoy {
+            current_frame: [1; 32],
+            ..Default::default()
+        };
+
+        AhoyInstruction::ClearScreen
+            .execute(&mut ahoy)
+            .expect("should not throw error");
+
+        assert_eq!(ahoy.current_frame, [0_u64; 32]);
     }
 }

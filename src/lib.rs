@@ -1,6 +1,8 @@
+mod display;
 mod instructions;
 
 use anyhow::anyhow;
+use display::AhoyFrame;
 use std::{collections::VecDeque, io::BufRead};
 
 const PROGRAM_MEMORY_START: usize = 0x200;
@@ -21,6 +23,7 @@ pub struct Ahoy {
     stack: VecDeque<u16>,
     delay_timer: u8,
     sound_timer: u8,
+    current_frame: AhoyFrame,
 }
 
 impl Default for Ahoy {
@@ -36,6 +39,7 @@ impl Default for Ahoy {
             stack: VecDeque::with_capacity(256),
             delay_timer: 0,
             sound_timer: 0,
+            current_frame: [0; 32],
         }
     }
 }
