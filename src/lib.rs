@@ -3,6 +3,7 @@ mod instructions;
 
 use anyhow::anyhow;
 use display::AhoyFrame;
+use instructions::AhoyInstruction;
 use std::{collections::VecDeque, io::BufRead};
 
 const PROGRAM_MEMORY_START: usize = 0x200;
@@ -79,13 +80,23 @@ impl Ahoy {
         self.counter = (self.counter + 2) % (MAX_MEMORY as u16);
         instruction
     }
+
+    fn execute(&mut self, instruction: AhoyInstruction) -> anyhow::Result<()> {
+        match instruction {
+            AhoyInstruction::ClearScreen => {
+                self.current_frame = [0; 32];
+            }
+            _ => todo!(),
+        };
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::io::{BufReader, Cursor};
 
-    use crate::Ahoy;
+    use crate::{Ahoy, instructions::AhoyInstruction};
 
     #[test]
     fn load_normal_program() {
@@ -175,5 +186,17 @@ mod tests {
         let actual_instruction = chip8.fetch();
 
         assert_eq!(expected_instruction, actual_instruction);
+    }
+
+    #[test]
+    fn clear_screen_sets_frame_to_zeroes() {
+        let mut ahoy = Ahoy {
+            current_frame: [1; 32],
+            ..Default::default()
+        };
+        ahoy.execute(AhoyInstruction::ClearScreen)
+            .expect("should not throw error");
+
+        assert_eq!(ahoy.current_frame, [0_u64; 32]);
     }
 }

@@ -17,7 +17,7 @@ impl From<u16> for RegisterInstruction {
 
 #[repr(u16)]
 #[derive(Debug)]
-enum AhoyInstruction {
+pub enum AhoyInstruction {
     Jump(u16),
     CallSubroutine(u16),
     SetRegister(RegisterInstruction),
@@ -32,12 +32,7 @@ enum AhoyInstruction {
     StopSubroutine = 0x00EE,
     UnknownInstruction,
 }
-impl AhoyInstruction {
-    pub fn execute(&self, ahoy: &mut Ahoy) -> anyhow::Result<()> {
-        ahoy.current_frame = [0; 32];
-        Ok(())
-    }
-}
+
 impl From<u16> for AhoyInstruction {
     fn from(value: u16) -> Self {
         match value {
@@ -176,19 +171,5 @@ mod tests {
                 sprite_height: 8
             }
         ));
-    }
-
-    #[test]
-    fn clear_screen_sets_frame_to_zeroes() {
-        let mut ahoy = Ahoy {
-            current_frame: [1; 32],
-            ..Default::default()
-        };
-
-        AhoyInstruction::ClearScreen
-            .execute(&mut ahoy)
-            .expect("should not throw error");
-
-        assert_eq!(ahoy.current_frame, [0_u64; 32]);
     }
 }
