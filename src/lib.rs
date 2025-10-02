@@ -23,8 +23,8 @@ pub struct Ahoy {
     sound_timer: u8,
 }
 
-impl Ahoy {
-    fn new() -> Self {
+impl Default for Ahoy {
+    fn default() -> Self {
         let mut memory = [0; MAX_MEMORY];
 
         memory[0x050..=0x09F].copy_from_slice(&FONT);
@@ -38,7 +38,9 @@ impl Ahoy {
             sound_timer: 0,
         }
     }
+}
 
+impl Ahoy {
     pub fn load<R: BufRead>(&mut self, program_reader: &mut R) -> anyhow::Result<()> {
         let mut total_bytes_read = 0_usize;
 
@@ -83,7 +85,7 @@ mod tests {
 
     #[test]
     fn load_normal_program() {
-        let mut chip8 = Ahoy::new();
+        let mut chip8 = Ahoy::default();
         let mut program_reader = BufReader::new(Cursor::new([
             0x01_u8, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
         ]));
@@ -104,7 +106,7 @@ mod tests {
 
     #[test]
     fn load_returns_error_for_empty_file() {
-        let mut chip8 = Ahoy::new();
+        let mut chip8 = Ahoy::default();
         let mut program_reader = BufReader::new(Cursor::new([]));
 
         chip8
@@ -114,7 +116,7 @@ mod tests {
 
     #[test]
     fn load_returns_error_for_larger_than_buffer_file() {
-        let mut chip8 = Ahoy::new();
+        let mut chip8 = Ahoy::default();
         let mut program_reader = BufReader::new(Cursor::new([1u8; 4096]));
 
         chip8
@@ -124,27 +126,31 @@ mod tests {
 
     #[test]
     fn fetch_increments_program_counter_by_two() {
-        let mut chip8 = Ahoy::new();
+        let mut chip8 = Ahoy::default();
 
         chip8.fetch();
         assert_eq!(chip8.counter, 2u16);
+
         chip8.fetch();
         assert_eq!(chip8.counter, 4u16);
     }
 
     #[test]
     fn fetch_loops_back_program_counter_to_zero_when_overflowing_12bits() {
-        let mut chip8 = Ahoy::new();
-        chip8.counter = 4094;
+        let mut chip8 = Ahoy {
+            counter: 4094,
+            ..Default::default()
+        };
 
         chip8.fetch();
         assert_eq!(chip8.counter, 0);
+
         chip8.fetch();
         assert_eq!(chip8.counter, 2);
     }
     #[test]
     fn fetch_retrieves_expected_bytes_from_memory_beginning() {
-        let mut chip8 = Ahoy::new();
+        let mut chip8 = Ahoy::default();
         chip8.memory[0..2].copy_from_slice(&[0xF0, 0x0F]);
 
         let expected_instruction = 0xF00F;
@@ -155,8 +161,10 @@ mod tests {
 
     #[test]
     fn fetch_retrieves_expected_bytes_from_arbitrary_position() {
-        let mut chip8 = Ahoy::new();
-        chip8.counter = 0x6F;
+        let mut chip8 = Ahoy {
+            counter: 0x6F,
+            ..Default::default()
+        };
         chip8.memory[0x6F..0x73].copy_from_slice(&[0xAB, 0xBC, 0xCD, 0xDE]);
 
         let expected_instruction = 0xABBC;
