@@ -1,3 +1,5 @@
+use crate::Ahoy;
+
 #[derive(Debug)]
 struct RegisterInstruction {
     register: u8,
@@ -15,7 +17,7 @@ impl From<u16> for RegisterInstruction {
 
 #[repr(u16)]
 #[derive(Debug)]
-enum AhoyInstruction {
+pub enum AhoyInstruction {
     Jump(u16),
     CallSubroutine(u16),
     SetRegister(RegisterInstruction),
@@ -30,6 +32,7 @@ enum AhoyInstruction {
     StopSubroutine = 0x00EE,
     UnknownInstruction,
 }
+
 impl From<u16> for AhoyInstruction {
     fn from(value: u16) -> Self {
         match value {

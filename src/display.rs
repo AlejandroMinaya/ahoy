@@ -3,10 +3,10 @@ use ratatui::{
     widgets::canvas::{Canvas, Rectangle},
 };
 
-pub type Frame = [u64; 32];
+pub type AhoyFrame = [u64; 32];
 
 pub trait AhoyDisplay {
-    fn draw(&mut self, frame: &Frame) -> anyhow::Result<()>;
+    fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()>;
 }
 
 pub struct RatatuiAhoyDisplay {
@@ -49,7 +49,7 @@ impl Default for Size {
 }
 
 impl AhoyDisplay for RatatuiAhoyDisplay {
-    fn draw(&mut self, frame: &Frame) -> anyhow::Result<()> {
+    fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()> {
         let rectangle_size = Size::default().scale(10.0);
         let display_size = Size::new(
             64_f64 * rectangle_size.width,
