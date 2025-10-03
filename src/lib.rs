@@ -1,3 +1,4 @@
+mod constants;
 mod display;
 mod instructions;
 
@@ -6,19 +7,8 @@ use display::AhoyFrame;
 use instructions::AhoyInstruction;
 use std::{collections::VecDeque, io::BufRead};
 
-const PROGRAM_MEMORY_START: usize = 0x200;
-const MAX_MEMORY: usize = 0x1000;
-const AVAILABLE_PROGRAM_MEMORY: usize = MAX_MEMORY - PROGRAM_MEMORY_START;
-const FONT: [u8; 80] = [
-    0xF0, 0x90, 0x90, 0x90, 0xF0, 0x20, 0x60, 0x20, 0x20, 0x70, 0xF0, 0x10, 0xF0, 0x80, 0xF0, 0xF0,
-    0x10, 0xF0, 0x10, 0xF0, 0x90, 0x90, 0xF0, 0x10, 0x10, 0xF0, 0x80, 0xF0, 0x10, 0xF0, 0xF0, 0x80,
-    0xF0, 0x90, 0xF0, 0xF0, 0x10, 0x20, 0x40, 0x40, 0xF0, 0x90, 0xF0, 0x90, 0xF0, 0xF0, 0x90, 0xF0,
-    0x10, 0xF0, 0xF0, 0x90, 0xF0, 0x90, 0x90, 0xE0, 0x90, 0xE0, 0x90, 0xE0, 0xF0, 0x80, 0x80, 0x80,
-    0xF0, 0xE0, 0x90, 0x90, 0x90, 0xE0, 0xF0, 0x80, 0xF0, 0x80, 0xF0, 0xF0, 0x80, 0xF0, 0x80, 0x80,
-];
-
 pub struct Ahoy {
-    memory: [u8; MAX_MEMORY],
+    memory: [u8; constants::MAX_MEMORY],
     index: u16,
     counter: u16,
     stack: VecDeque<u16>,
@@ -29,9 +19,9 @@ pub struct Ahoy {
 
 impl Default for Ahoy {
     fn default() -> Self {
-        let mut memory = [0; MAX_MEMORY];
+        let mut memory = [0; constants::MAX_MEMORY];
 
-        memory[0x050..=0x09F].copy_from_slice(&FONT);
+        memory[0x050..=0x09F].copy_from_slice(&constants::FONT);
 
         Ahoy {
             memory,
@@ -50,7 +40,7 @@ impl Ahoy {
         let mut total_bytes_read = 0_usize;
 
         while let Ok(curr_bytes_read) =
-            program_reader.read(&mut self.memory[PROGRAM_MEMORY_START..])
+            program_reader.read(&mut self.memory[constants::PROGRAM_MEMORY_START..])
         {
             if curr_bytes_read == 0 {
                 break;
@@ -62,7 +52,7 @@ impl Ahoy {
             return Err(anyhow!("Received empty program"));
         }
 
-        if total_bytes_read > AVAILABLE_PROGRAM_MEMORY {
+        if total_bytes_read > constants::AVAILABLE_PROGRAM_MEMORY {
             return Err(anyhow!("Program exceeds memory limits"));
         }
 
@@ -77,7 +67,7 @@ impl Ahoy {
 
         let instruction = (first_nibble << 8) | second_nibble;
 
-        self.counter = (self.counter + 2) % (MAX_MEMORY as u16);
+        self.counter = (self.counter + 2) % (constants::MAX_MEMORY as u16);
         instruction
     }
 
@@ -85,6 +75,9 @@ impl Ahoy {
         match instruction {
             AhoyInstruction::ClearScreen => {
                 self.current_frame = [0; 32];
+            }
+            AhoyInstruction::Jump(addr) => {
+                self.counter = addr;
             }
             _ => todo!(),
         };
@@ -187,7 +180,7 @@ mod tests {
     }
 
     #[test]
-    fn clear_screen_sets_frame_to_zeroes() {
+    fn instruction_clear_screen_sets_frame_to_zeroes() {
         let mut ahoy = Ahoy {
             current_frame: [1; 32],
             ..Default::default()
@@ -196,5 +189,15 @@ mod tests {
             .expect("should not throw error");
 
         assert_eq!(ahoy.current_frame, [0_u64; 32]);
+    }
+
+    #[test]
+    fn instruction_jump_updates_the_pc_value() {
+        let mut ahoy = Ahoy::default();
+
+        ahoy.execute(AhoyInstruction::Jump(0x0DAD))
+            .expect("should not throw error");
+
+        assert_eq!(ahoy.counter, 0x0DAD);
     }
 }
