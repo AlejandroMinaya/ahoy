@@ -86,6 +86,9 @@ impl Ahoy {
             AhoyInstruction::ClearScreen => {
                 self.current_frame = [0; 32];
             }
+            AhoyInstruction::Jump(addr) => {
+                self.counter = addr;
+            }
             _ => todo!(),
         };
         Ok(())
@@ -187,7 +190,7 @@ mod tests {
     }
 
     #[test]
-    fn clear_screen_sets_frame_to_zeroes() {
+    fn instruction_clear_screen_sets_frame_to_zeroes() {
         let mut ahoy = Ahoy {
             current_frame: [1; 32],
             ..Default::default()
@@ -196,5 +199,15 @@ mod tests {
             .expect("should not throw error");
 
         assert_eq!(ahoy.current_frame, [0_u64; 32]);
+    }
+
+    #[test]
+    fn instruction_jump_updates_the_pc_value() {
+        let mut ahoy = Ahoy::default();
+
+        ahoy.execute(AhoyInstruction::Jump(0x0DAD))
+            .expect("should not throw error");
+
+        assert_eq!(ahoy.counter, 0x0DAD);
     }
 }
