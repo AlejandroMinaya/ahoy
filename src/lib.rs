@@ -85,7 +85,8 @@ impl Ahoy {
                 self.registers[register as usize] = value;
             }
             AhoyInstruction::AddToRegister(register, value) => {
-                self.registers[register as usize] += value;
+                let new_value = self.registers[register as usize].wrapping_add(value);
+                self.registers[register as usize] = new_value;
             }
             _ => todo!(),
         };
@@ -234,5 +235,20 @@ mod tests {
 
         assert_eq!(ahoy.registers[0xA], 0xFF);
         assert_eq!(ahoy.registers[0xD], 0xF0);
+    }
+
+    #[test]
+    fn instruction_register_wraps_around_when_adding_value() {
+        let mut ahoy = Ahoy::default();
+        ahoy.registers[0xA] = 0xFF;
+        ahoy.registers[0xD] = 0xFF;
+
+        ahoy.execute(AhoyInstruction::AddToRegister(0xA, 0xAB))
+            .unwrap();
+        ahoy.execute(AhoyInstruction::AddToRegister(0xD, 0xDE))
+            .unwrap();
+
+        assert_eq!(ahoy.registers[0xA], 0xAA);
+        assert_eq!(ahoy.registers[0xD], 0xDD);
     }
 }
