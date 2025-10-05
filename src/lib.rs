@@ -81,12 +81,12 @@ impl Ahoy {
             AhoyInstruction::Jump(addr) => {
                 self.counter = addr;
             }
-            AhoyInstruction::SetRegister(register, value) => {
-                self.registers[register as usize] = value;
+            AhoyInstruction::SetRegister(register_addr, value) => {
+                self.registers[register_addr as usize] = value;
             }
-            AhoyInstruction::AddToRegister(register, value) => {
-                let new_value = self.registers[register as usize].wrapping_add(value);
-                self.registers[register as usize] = new_value;
+            AhoyInstruction::AddToRegister(register_addr, value) => {
+                let prev_value = self.registers[register_addr as usize];
+                self.registers[register_addr as usize] = prev_value.wrapping_add(value);
             }
             _ => todo!(),
         };
