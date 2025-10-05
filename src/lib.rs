@@ -9,6 +9,7 @@ use std::{collections::VecDeque, io::BufRead};
 
 pub struct Ahoy {
     memory: [u8; constants::MAX_MEMORY],
+    registers: [u8; 16],
     index: u16,
     counter: u16,
     stack: VecDeque<u16>,
@@ -25,6 +26,7 @@ impl Default for Ahoy {
 
         Ahoy {
             memory,
+            registers: [0; 16],
             index: 0,
             counter: 0,
             stack: VecDeque::with_capacity(256),
@@ -78,6 +80,9 @@ impl Ahoy {
             }
             AhoyInstruction::Jump(addr) => {
                 self.counter = addr;
+            }
+            AhoyInstruction::SetRegister(register, value) => {
+                self.registers[register as usize] = value;
             }
             _ => todo!(),
         };
@@ -185,8 +190,7 @@ mod tests {
             current_frame: [1; 32],
             ..Default::default()
         };
-        ahoy.execute(AhoyInstruction::ClearScreen)
-            .expect("should not throw error");
+        ahoy.execute(AhoyInstruction::ClearScreen).unwrap();
 
         assert_eq!(ahoy.current_frame, [0_u64; 32]);
     }
@@ -195,9 +199,22 @@ mod tests {
     fn instruction_jump_updates_the_pc_value() {
         let mut ahoy = Ahoy::default();
 
-        ahoy.execute(AhoyInstruction::Jump(0x0DAD))
-            .expect("should not throw error");
+        ahoy.execute(AhoyInstruction::Jump(0x0DAD)).unwrap();
 
         assert_eq!(ahoy.counter, 0x0DAD);
+    }
+
+    #[test]
+    fn instruction_set_register_value_updates_value() {
+        let mut ahoy = Ahoy::default();
+
+        ahoy.execute(AhoyInstruction::SetRegister(0xA, 0xFE))
+            .unwrap();
+        ahoy.execute(AhoyInstruction::SetRegister(0xD, 0xE0))
+            .unwrap();
+
+        assert_eq!(ahoy.registers[0xA], 0xFE);
+
+        assert_eq!(ahoy.registers[0xD], 0xE0);
     }
 }
