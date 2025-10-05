@@ -1,5 +1,3 @@
-use crate::Ahoy;
-
 #[repr(u16)]
 #[derive(Debug)]
 pub enum AhoyInstruction {
@@ -18,11 +16,14 @@ pub enum AhoyInstruction {
     UnknownInstruction,
 }
 
-fn parse_instruction_into_register_tuple(instruction: u16) -> (u8, u8) {
-    (
-        ((instruction >> 8) & 0xF) as u8,
-        (instruction & 0x0FF) as u8,
-    )
+trait RegisterInstruction {
+    fn into_regsiter_instruction(self) -> (u8, u8);
+}
+
+impl RegisterInstruction for u16 {
+    fn into_regsiter_instruction(self) -> (u8, u8) {
+        (((self >> 8) & 0xF) as u8, (self & 0x0FF) as u8)
+    }
 }
 
 impl From<u16> for AhoyInstruction {
@@ -34,11 +35,11 @@ impl From<u16> for AhoyInstruction {
                 1 => Self::Jump(instruction & 0x0FFF),
                 2 => Self::CallSubroutine(instruction & 0x0FFF),
                 6 => {
-                    let (addr, value) = parse_instruction_into_register_tuple(instruction);
+                    let (addr, value) = instruction.into_regsiter_instruction();
                     Self::SetRegister(addr, value)
                 }
                 7 => {
-                    let (addr, value) = parse_instruction_into_register_tuple(instruction);
+                    let (addr, value) = instruction.into_regsiter_instruction();
                     Self::AddToRegister(addr, value)
                 }
                 0xA => Self::SetIndex(instruction & 0x0FFF),
