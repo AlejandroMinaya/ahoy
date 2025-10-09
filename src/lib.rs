@@ -251,4 +251,19 @@ mod tests {
         assert_eq!(ahoy.registers[0xA], 0xAA);
         assert_eq!(ahoy.registers[0xD], 0xDD);
     }
+
+    #[test]
+    fn instruction_drawing_flips_the_bits_at_the_beginning_of_the_frame() {
+        let mut ahoy = Ahoy::default();
+        ahoy.memory[0..32].copy_from_slice(&[1; 32]);
+
+        ahoy.execute(AhoyInstruction::Display {
+            x_register: 0,
+            y_register: 0,
+            sprite_height: 0,
+        })
+        .unwrap();
+
+        assert_eq!(ahoy.current_frame[..32], [1; 32]);
+    }
 }
