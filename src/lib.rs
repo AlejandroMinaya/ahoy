@@ -279,7 +279,7 @@ mod tests {
     }
 
     #[test]
-    fn instruction_drawing_flips_the_bits_at_the_beginning_of_the_frame() {
+    fn instruction_drawing_sets_value_on_empty_frame() {
         let mut ahoy = Ahoy::default();
         ahoy.memory[0..32].copy_from_slice(&[1; 32]);
 
@@ -290,7 +290,26 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 0b00000000000000000111111111111111);
+        assert_eq!(ahoy.current_frame[0], 32_767);
         assert_eq!(ahoy.current_frame[1..], [0_u32; 63]);
+    }
+
+    #[test]
+    fn instruction_drawing_sets_arbitraty_sprite_on_empty_frame() {
+        let mut ahoy = Ahoy::default();
+        ahoy.memory[0..32].copy_from_slice(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1,
+            0, 0, 1,
+        ]);
+        ahoy.index = 17;
+
+        ahoy.execute(AhoyInstruction::Display {
+            x_register: 0,
+            y_register: 0,
+            sprite_height: 15,
+        })
+        .unwrap();
+
+        assert_eq!(ahoy.current_frame[0], 1337);
     }
 }
