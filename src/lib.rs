@@ -3,6 +3,7 @@ mod display;
 mod instructions;
 
 use anyhow::anyhow;
+use constants::FLAG_REGISTER;
 use display::{AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 use instructions::AhoyInstruction;
 use std::{
@@ -106,12 +107,12 @@ impl Ahoy {
                     .iter()
                     .fold(0_u32, |sprite, b| (sprite << 1) | *b as u32);
 
-                println!(
-                    "MEM ({:?}): {:?} --> SPRITE: {:?}",
-                    sprite_end - sprite_start,
-                    &self.memory[sprite_start..sprite_end],
-                    sprite << y
-                );
+                self.registers[FLAG_REGISTER] =
+                    if ((self.current_frame[x] >> y) & sprite).count_ones() == 0 {
+                        0
+                    } else {
+                        1
+                    };
                 self.current_frame[x] ^= sprite << y;
             }
             _ => todo!(),
@@ -344,5 +345,36 @@ mod tests {
         .unwrap();
 
         assert_eq!(ahoy.current_frame[0], 6);
+    }
+
+    #[test]
+    fn instruction_drawing_sets_the_flag_register_when_a_bit_turned_off() {
+        let mut ahoy = Ahoy::default();
+        ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
+        ahoy.current_frame[0] = 0b10010110;
+        ahoy.registers[0xA] = 4;
+
+        ahoy.execute(AhoyInstruction::Display {
+            x_register: 0,
+            y_register: 0xA,
+            sprite_height: 4,
+        })
+        .unwrap();
+
+        assert_eq!(ahoy.registers[0xF], 1);
+    }
+
+    #[test]
+    fn instruction_drawing_unsets_the_flag_register_when_a_bits_were_only_turned_on() {
+        let mut ahoy = Ahoy::default();
+        ahoy.memory[0..32].copy_from_slice(&[1; 32]);
+
+        ahoy.execute(AhoyInstruction::Display {
+            x_register: 0,
+            y_register: 0,
+            sprite_height: 15,
+        })
+        .unwrap();
+        assert_eq!(ahoy.registers[0xF], 0);
     }
 }
