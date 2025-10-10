@@ -102,13 +102,17 @@ impl Ahoy {
 
                 let sprite_start = self.index as usize;
                 let sprite_end = sprite_start + sprite_height as usize;
-                let sprite_range = sprite_start..sprite_end;
-                let sprite = self.memory[sprite_range]
+                let sprite = self.memory[sprite_start..sprite_end]
                     .iter()
-                    .fold(0_u32, |mut sprite, b| {
-                        sprite &= *b as u32;
-                        sprite << 1
-                    });
+                    .fold(0_u32, |sprite, b| (sprite << 1) | *b as u32);
+
+                println!(
+                    "MEM ({:?}): {:?} --> SPRITE: {:?}",
+                    sprite_end - sprite_start,
+                    &self.memory[sprite_start..sprite_end],
+                    sprite
+                );
+                self.current_frame[x] = sprite;
             }
             _ => todo!(),
         };
@@ -282,10 +286,11 @@ mod tests {
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
             y_register: 0,
-            sprite_height: 0,
+            sprite_height: 15,
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[..32], [1; 32]);
+        assert_eq!(ahoy.current_frame[0], 0b00000000000000000111111111111111);
+        assert_eq!(ahoy.current_frame[1..], [0_u32; 63]);
     }
 }
