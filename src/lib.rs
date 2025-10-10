@@ -112,7 +112,7 @@ impl Ahoy {
                     &self.memory[sprite_start..sprite_end],
                     sprite
                 );
-                self.current_frame[x] = sprite;
+                self.current_frame[x] ^= sprite;
             }
             _ => todo!(),
         };
@@ -311,5 +311,21 @@ mod tests {
         .unwrap();
 
         assert_eq!(ahoy.current_frame[0], 1337);
+    }
+
+    #[test]
+    fn instruction_drawing_treats_sprite_zero_bits_as_transparent() {
+        let mut ahoy = Ahoy::default();
+        ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
+        ahoy.current_frame[0] = 0b0110;
+
+        ahoy.execute(AhoyInstruction::Display {
+            x_register: 0,
+            y_register: 0,
+            sprite_height: 4,
+        })
+        .unwrap();
+
+        assert_eq!(ahoy.current_frame[0], 15);
     }
 }
