@@ -110,9 +110,9 @@ impl Ahoy {
                     "MEM ({:?}): {:?} --> SPRITE: {:?}",
                     sprite_end - sprite_start,
                     &self.memory[sprite_start..sprite_end],
-                    sprite
+                    sprite << y
                 );
-                self.current_frame[x] ^= sprite;
+                self.current_frame[x] ^= sprite << y;
             }
             _ => todo!(),
         };
@@ -327,5 +327,22 @@ mod tests {
         .unwrap();
 
         assert_eq!(ahoy.current_frame[0], 15);
+    }
+
+    #[test]
+    fn instruction_drawing_considers_y_for_offset() {
+        let mut ahoy = Ahoy::default();
+        ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
+        ahoy.current_frame[0] = 0b10010110;
+        ahoy.registers[0xA] = 4;
+
+        ahoy.execute(AhoyInstruction::Display {
+            x_register: 0,
+            y_register: 0xA,
+            sprite_height: 4,
+        })
+        .unwrap();
+
+        assert_eq!(ahoy.current_frame[0], 6);
     }
 }
