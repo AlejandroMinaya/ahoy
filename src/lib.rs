@@ -3,9 +3,12 @@ mod display;
 mod instructions;
 
 use anyhow::anyhow;
-use display::AhoyFrame;
+use display::{AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 use instructions::AhoyInstruction;
-use std::{collections::VecDeque, io::BufRead};
+use std::{
+    collections::VecDeque,
+    io::{BufRead, Read},
+};
 
 pub struct Ahoy {
     memory: [u8; constants::MAX_MEMORY],
@@ -32,7 +35,7 @@ impl Default for Ahoy {
             stack: VecDeque::with_capacity(256),
             delay_timer: 0,
             sound_timer: 0,
-            current_frame: [0; 32],
+            current_frame: [0; 64],
         }
     }
 }
@@ -76,7 +79,7 @@ impl Ahoy {
     fn execute(&mut self, instruction: AhoyInstruction) -> anyhow::Result<()> {
         match instruction {
             AhoyInstruction::ClearScreen => {
-                self.current_frame = [0; 32];
+                self.current_frame = [0; DISPLAY_WIDTH];
             }
             AhoyInstruction::Jump(addr) => {
                 self.counter = addr;
@@ -87,6 +90,25 @@ impl Ahoy {
             AhoyInstruction::AddToRegister(register_addr, value) => {
                 let prev_value = self.registers[register_addr as usize];
                 self.registers[register_addr as usize] = prev_value.wrapping_add(value);
+            }
+            AhoyInstruction::Display {
+                x_register,
+                y_register,
+                sprite_height,
+            } => {
+                let x: usize = (self.registers[x_register as usize] % (DISPLAY_WIDTH as u8)).into();
+                let y: usize =
+                    (self.registers[y_register as usize] % (DISPLAY_HEIGHT as u8)).into();
+
+                let sprite_start = self.index as usize;
+                let sprite_end = sprite_start + sprite_height as usize;
+                let sprite_range = sprite_start..sprite_end;
+                let sprite = self.memory[sprite_range]
+                    .iter()
+                    .fold(0_u32, |mut sprite, b| {
+                        sprite &= *b as u32;
+                        sprite << 1
+                    });
             }
             _ => todo!(),
         };
@@ -191,12 +213,12 @@ mod tests {
     #[test]
     fn instruction_clear_screen_sets_frame_to_zeroes() {
         let mut ahoy = Ahoy {
-            current_frame: [1; 32],
+            current_frame: [1; 64],
             ..Default::default()
         };
         ahoy.execute(AhoyInstruction::ClearScreen).unwrap();
 
-        assert_eq!(ahoy.current_frame, [0_u64; 32]);
+        assert_eq!(ahoy.current_frame, [0_u32; 64]);
     }
 
     #[test]
