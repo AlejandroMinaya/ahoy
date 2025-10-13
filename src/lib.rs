@@ -82,6 +82,9 @@ impl Ahoy {
             AhoyInstruction::Jump(addr) => {
                 self.counter = addr;
             }
+            AhoyInstruction::SetIndex(value) => {
+                self.index = value;
+            }
             AhoyInstruction::SetRegister(register_addr, value) => {
                 self.registers[register_addr] = value;
             }
@@ -369,5 +372,13 @@ mod tests {
         })
         .unwrap();
         assert_eq!(ahoy.registers[0xF], 0);
+    }
+
+    #[test]
+    fn instruction_set_index_updates_its_value() {
+        let mut ahoy = Ahoy::default();
+        ahoy.execute(AhoyInstruction::SetIndex(1023)).unwrap();
+
+        assert_eq!(ahoy.index, 1023_u16);
     }
 }
