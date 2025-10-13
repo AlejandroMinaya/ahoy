@@ -97,12 +97,12 @@ impl Ahoy {
                 y_register,
                 sprite_height,
             } => {
-                let x: usize = (self.registers[x_register as usize] % (DISPLAY_WIDTH as u8)).into();
-                let y: usize =
-                    (self.registers[y_register as usize] % (DISPLAY_HEIGHT as u8)).into();
+                let x = (self.registers[x_register as usize] % (DISPLAY_WIDTH as u8)) as usize;
+                let y = (self.registers[y_register as usize] % (DISPLAY_HEIGHT as u8)) as usize;
 
                 let sprite_start = self.index as usize;
                 let sprite_end = sprite_start + sprite_height as usize;
+
                 let sprite = self.memory[sprite_start..sprite_end]
                     .iter()
                     .fold(0_u32, |sprite, b| (sprite << 1) | *b as u32);
