@@ -2,8 +2,8 @@
 pub enum AhoyInstruction {
     Jump(u16),
     CallSubroutine(u16),
-    SetRegister(u8, u8),
-    AddToRegister(u8, u8),
+    SetRegister(usize, u8),
+    AddToRegister(usize, u8),
     SetIndex(u16),
     Display {
         x_register: usize,
@@ -35,11 +35,11 @@ impl From<u16> for AhoyInstruction {
                 2 => Self::CallSubroutine(instruction & 0x0FFF),
                 6 => {
                     let (addr, value) = instruction.into_regsiter_instruction();
-                    Self::SetRegister(addr, value)
+                    Self::SetRegister(addr as usize, value)
                 }
                 7 => {
                     let (addr, value) = instruction.into_regsiter_instruction();
-                    Self::AddToRegister(addr, value)
+                    Self::AddToRegister(addr as usize, value)
                 }
                 0xA => Self::SetIndex(instruction & 0x0FFF),
                 0xD => Self::Display {

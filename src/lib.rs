@@ -6,10 +6,7 @@ use anyhow::anyhow;
 use constants::FLAG_REGISTER;
 use display::{AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 use instructions::AhoyInstruction;
-use std::{
-    collections::VecDeque,
-    io::{BufRead, Read},
-};
+use std::{collections::VecDeque, io::BufRead};
 
 pub struct Ahoy {
     memory: [u8; constants::MAX_MEMORY],
@@ -86,11 +83,11 @@ impl Ahoy {
                 self.counter = addr;
             }
             AhoyInstruction::SetRegister(register_addr, value) => {
-                self.registers[register_addr as usize] = value;
+                self.registers[register_addr] = value;
             }
             AhoyInstruction::AddToRegister(register_addr, value) => {
-                let prev_value = self.registers[register_addr as usize];
-                self.registers[register_addr as usize] = prev_value.wrapping_add(value);
+                let prev_value = self.registers[register_addr];
+                self.registers[register_addr] = prev_value.wrapping_add(value);
             }
             AhoyInstruction::Display {
                 x_register,
