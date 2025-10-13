@@ -108,11 +108,8 @@ impl Ahoy {
                     .fold(0_u32, |sprite, b| (sprite << 1) | *b as u32);
 
                 self.registers[FLAG_REGISTER] =
-                    if ((self.current_frame[x] >> y) & sprite).count_ones() == 0 {
-                        0
-                    } else {
-                        1
-                    };
+                    u8::from(((self.current_frame[x] >> y) & sprite) > 0);
+
                 self.current_frame[x] ^= sprite << y;
             }
             _ => todo!(),
