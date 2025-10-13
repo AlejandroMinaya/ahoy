@@ -97,8 +97,8 @@ impl Ahoy {
                 y_register,
                 sprite_height,
             } => {
-                let x = (self.registers[x_register as usize] % (DISPLAY_WIDTH as u8)) as usize;
-                let y = (self.registers[y_register as usize] % (DISPLAY_HEIGHT as u8)) as usize;
+                let x = self.registers[x_register] as usize % DISPLAY_WIDTH;
+                let y = self.registers[y_register] as usize % DISPLAY_HEIGHT;
 
                 let sprite_start = self.index as usize;
                 let sprite_end = sprite_start + sprite_height as usize;
