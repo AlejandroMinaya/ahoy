@@ -1,6 +1,6 @@
 #[repr(u16)]
 pub enum AhoyInstruction {
-    Jump(u16),
+    Jump(usize),
     CallSubroutine(u16),
     SetRegister(usize, u8),
     AddToRegister(usize, u8),
@@ -31,7 +31,7 @@ impl From<u16> for AhoyInstruction {
             0x00E0 => Self::ClearScreen,
             0x00EE => Self::StopSubroutine,
             instruction => match instruction >> 0xC {
-                1 => Self::Jump(instruction & 0x0FFF),
+                1 => Self::Jump((instruction & 0x0FFF) as usize),
                 2 => Self::CallSubroutine(instruction & 0x0FFF),
                 6 => {
                     let (addr, value) = instruction.into_regsiter_instruction();

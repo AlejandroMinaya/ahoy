@@ -12,7 +12,7 @@ pub struct Ahoy {
     memory: [u8; constants::MAX_MEMORY],
     registers: [u8; 16],
     index: u16,
-    counter: u16,
+    counter: usize,
     stack: VecDeque<u16>,
     delay_timer: u8,
     sound_timer: u8,
@@ -65,12 +65,12 @@ impl Ahoy {
     fn fetch(&mut self) -> u16 {
         let usize_counter = self.counter as usize;
 
-        let first_nibble: u16 = self.memory[usize_counter].into();
-        let second_nibble: u16 = self.memory[usize_counter + 1].into();
+        let first_nibble = self.memory[usize_counter] as u16;
+        let second_nibble = self.memory[usize_counter + 1] as u16;
 
         let instruction = (first_nibble << 8) | second_nibble;
 
-        self.counter = (self.counter + 2) % (constants::MAX_MEMORY as u16);
+        self.counter = (self.counter + 2) % constants::MAX_MEMORY;
         instruction
     }
 
@@ -99,7 +99,6 @@ impl Ahoy {
 
                 let sprite_start = self.index as usize;
                 let sprite_end = sprite_start + sprite_height as usize;
-
                 let sprite = self.memory[sprite_start..sprite_end]
                     .iter()
                     .fold(0_u32, |sprite, b| (sprite << 1) | *b as u32);
@@ -165,10 +164,10 @@ mod tests {
         let mut ahoy = Ahoy::default();
 
         ahoy.fetch();
-        assert_eq!(ahoy.counter, 2u16);
+        assert_eq!(ahoy.counter, 2_usize);
 
         ahoy.fetch();
-        assert_eq!(ahoy.counter, 4u16);
+        assert_eq!(ahoy.counter, 4_usize);
     }
 
     #[test]
