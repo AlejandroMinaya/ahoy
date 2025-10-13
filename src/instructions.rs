@@ -1,14 +1,13 @@
 #[repr(u16)]
-#[derive(Debug)]
 pub enum AhoyInstruction {
-    Jump(u16),
+    Jump(usize),
     CallSubroutine(u16),
-    SetRegister(u8, u8),
-    AddToRegister(u8, u8),
+    SetRegister(usize, u8),
+    AddToRegister(usize, u8),
     SetIndex(u16),
     Display {
-        x_register: u8,
-        y_register: u8,
+        x_register: usize,
+        y_register: usize,
         sprite_height: u8,
     },
     ClearScreen = 0x00E0,
@@ -32,20 +31,20 @@ impl From<u16> for AhoyInstruction {
             0x00E0 => Self::ClearScreen,
             0x00EE => Self::StopSubroutine,
             instruction => match instruction >> 0xC {
-                1 => Self::Jump(instruction & 0x0FFF),
+                1 => Self::Jump((instruction & 0x0FFF) as usize),
                 2 => Self::CallSubroutine(instruction & 0x0FFF),
                 6 => {
                     let (addr, value) = instruction.into_regsiter_instruction();
-                    Self::SetRegister(addr, value)
+                    Self::SetRegister(addr as usize, value)
                 }
                 7 => {
                     let (addr, value) = instruction.into_regsiter_instruction();
-                    Self::AddToRegister(addr, value)
+                    Self::AddToRegister(addr as usize, value)
                 }
                 0xA => Self::SetIndex(instruction & 0x0FFF),
                 0xD => Self::Display {
-                    x_register: ((instruction >> 8) & 0xF) as u8,
-                    y_register: ((instruction >> 4) & 0xF) as u8,
+                    x_register: ((instruction >> 8) & 0xF) as usize,
+                    y_register: ((instruction >> 4) & 0xF) as usize,
                     sprite_height: (instruction & 0xF) as u8,
                 },
                 _ => Self::UnknownInstruction,
