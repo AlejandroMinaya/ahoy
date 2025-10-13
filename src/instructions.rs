@@ -1,36 +1,28 @@
-use crate::Ahoy;
-
-#[derive(Debug)]
-struct RegisterInstruction {
-    register: u8,
-    value: u8,
-}
-impl From<u16> for RegisterInstruction {
-    fn from(value: u16) -> Self {
-        let instruction = value & 0x0FFF;
-        Self {
-            register: (instruction >> 8) as u8,
-            value: (instruction & 0x0FF) as u8,
-        }
-    }
-}
-
 #[repr(u16)]
-#[derive(Debug)]
 pub enum AhoyInstruction {
-    Jump(u16),
+    Jump(usize),
     CallSubroutine(u16),
-    SetRegister(RegisterInstruction),
-    AddToRegister(RegisterInstruction),
+    SetRegister(usize, u8),
+    AddToRegister(usize, u8),
     SetIndex(u16),
     Display {
-        x_register: u8,
-        y_register: u8,
+        x_register: usize,
+        y_register: usize,
         sprite_height: u8,
     },
     ClearScreen = 0x00E0,
     StopSubroutine = 0x00EE,
     UnknownInstruction,
+}
+
+trait RegisterInstruction {
+    fn into_regsiter_instruction(self) -> (u8, u8);
+}
+
+impl RegisterInstruction for u16 {
+    fn into_regsiter_instruction(self) -> (u8, u8) {
+        (((self >> 8) & 0xF) as u8, (self & 0x0FF) as u8)
+    }
 }
 
 impl From<u16> for AhoyInstruction {
@@ -39,14 +31,20 @@ impl From<u16> for AhoyInstruction {
             0x00E0 => Self::ClearScreen,
             0x00EE => Self::StopSubroutine,
             instruction => match instruction >> 0xC {
-                1 => Self::Jump(instruction & 0x0FFF),
+                1 => Self::Jump((instruction & 0x0FFF) as usize),
                 2 => Self::CallSubroutine(instruction & 0x0FFF),
-                6 => Self::SetRegister(RegisterInstruction::from(instruction)),
-                7 => Self::AddToRegister(RegisterInstruction::from(instruction)),
+                6 => {
+                    let (addr, value) = instruction.into_regsiter_instruction();
+                    Self::SetRegister(addr as usize, value)
+                }
+                7 => {
+                    let (addr, value) = instruction.into_regsiter_instruction();
+                    Self::AddToRegister(addr as usize, value)
+                }
                 0xA => Self::SetIndex(instruction & 0x0FFF),
                 0xD => Self::Display {
-                    x_register: ((instruction >> 8) & 0xF) as u8,
-                    y_register: ((instruction >> 4) & 0xF) as u8,
+                    x_register: ((instruction >> 8) & 0xF) as usize,
+                    y_register: ((instruction >> 4) & 0xF) as usize,
                     sprite_height: (instruction & 0xF) as u8,
                 },
                 _ => Self::UnknownInstruction,
@@ -76,24 +74,15 @@ mod tests {
     fn decode_set_register_instruction() {
         assert!(matches!(
             0x6FE0.into(),
-            AhoyInstruction::SetRegister(RegisterInstruction {
-                register: 0xF,
-                value: 0xE0
-            })
+            AhoyInstruction::SetRegister(0xF, 0xE0)
         ));
         assert!(matches!(
             0x6EEE.into(),
-            AhoyInstruction::SetRegister(RegisterInstruction {
-                register: 0xE,
-                value: 0xEE
-            })
+            AhoyInstruction::SetRegister(0xE, 0xEE)
         ));
         assert!(matches!(
             0x6A00.into(),
-            AhoyInstruction::SetRegister(RegisterInstruction {
-                register: 0xA,
-                value: 0x00
-            })
+            AhoyInstruction::SetRegister(0xA, 0x00)
         ));
     }
 
@@ -101,24 +90,15 @@ mod tests {
     fn decode_add_value_to_register_instruction() {
         assert!(matches!(
             0x7808.into(),
-            AhoyInstruction::AddToRegister(RegisterInstruction {
-                register: 0x8,
-                value: 0x8
-            })
+            AhoyInstruction::AddToRegister(0x8, 0x8)
         ));
         assert!(matches!(
             0x7D1E.into(),
-            AhoyInstruction::AddToRegister(RegisterInstruction {
-                register: 0xD,
-                value: 0x1E
-            })
+            AhoyInstruction::AddToRegister(0xD, 0x1E)
         ));
         assert!(matches!(
             0x7BEE.into(),
-            AhoyInstruction::AddToRegister(RegisterInstruction {
-                register: 0xB,
-                value: 0xEE
-            })
+            AhoyInstruction::AddToRegister(0xB, 0xEE)
         ));
     }
 

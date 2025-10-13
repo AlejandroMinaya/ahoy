@@ -3,7 +3,9 @@ use ratatui::{
     widgets::canvas::{Canvas, Rectangle},
 };
 
-pub type AhoyFrame = [u64; 32];
+pub const DISPLAY_WIDTH: usize = 64;
+pub const DISPLAY_HEIGHT: usize = 32;
+pub type AhoyFrame = [u32; DISPLAY_WIDTH];
 
 pub trait AhoyDisplay {
     fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()>;
