@@ -82,6 +82,9 @@ impl Ahoy {
             AhoyInstruction::Jump(addr) => {
                 self.counter = addr;
             }
+            AhoyInstruction::SetIndex(value) => {
+                self.index = value;
+            }
             AhoyInstruction::SetRegister(register_addr, value) => {
                 self.registers[register_addr] = value;
             }
@@ -273,7 +276,7 @@ mod tests {
     }
 
     #[test]
-    fn instruction_drawing_sets_value_on_empty_frame() {
+    fn instruction_display_sets_value_on_empty_frame() {
         let mut ahoy = Ahoy::default();
         ahoy.memory[0..32].copy_from_slice(&[1; 32]);
 
@@ -289,7 +292,7 @@ mod tests {
     }
 
     #[test]
-    fn instruction_drawing_sets_arbitraty_sprite_on_empty_frame() {
+    fn instruction_display_sets_arbitraty_sprite_on_empty_frame() {
         let mut ahoy = Ahoy::default();
         ahoy.memory[0..32].copy_from_slice(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1,
@@ -308,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn instruction_drawing_treats_sprite_zero_bits_as_transparent() {
+    fn instruction_display_treats_sprite_zero_bits_as_transparent() {
         let mut ahoy = Ahoy::default();
         ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
         ahoy.current_frame[0] = 0b0110;
@@ -324,7 +327,7 @@ mod tests {
     }
 
     #[test]
-    fn instruction_drawing_considers_y_for_offset() {
+    fn instruction_display_considers_y_for_offset() {
         let mut ahoy = Ahoy::default();
         ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
         ahoy.current_frame[0] = 0b10010110;
@@ -341,7 +344,7 @@ mod tests {
     }
 
     #[test]
-    fn instruction_drawing_sets_the_flag_register_when_a_bit_turned_off() {
+    fn instruction_display_sets_the_flag_register_when_a_bit_turned_off() {
         let mut ahoy = Ahoy::default();
         ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
         ahoy.current_frame[0] = 0b10010110;
@@ -358,7 +361,7 @@ mod tests {
     }
 
     #[test]
-    fn instruction_drawing_unsets_the_flag_register_when_a_bits_were_only_turned_on() {
+    fn instruction_display_unsets_the_flag_register_when_a_bits_were_only_turned_on() {
         let mut ahoy = Ahoy::default();
         ahoy.memory[0..32].copy_from_slice(&[1; 32]);
 
@@ -369,5 +372,13 @@ mod tests {
         })
         .unwrap();
         assert_eq!(ahoy.registers[0xF], 0);
+    }
+
+    #[test]
+    fn instruction_set_index_updates_its_value() {
+        let mut ahoy = Ahoy::default();
+        ahoy.execute(AhoyInstruction::SetIndex(1023)).unwrap();
+
+        assert_eq!(ahoy.index, 1023_u16);
     }
 }
