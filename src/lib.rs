@@ -33,7 +33,7 @@ impl Default for Ahoy {
             stack: VecDeque::with_capacity(256),
             delay_timer: 0,
             sound_timer: 0,
-            current_frame: [0; 64],
+            current_frame: [0; DISPLAY_HEIGHT],
         }
     }
 }
@@ -77,7 +77,7 @@ impl Ahoy {
     fn execute(&mut self, instruction: AhoyInstruction) -> anyhow::Result<()> {
         match instruction {
             AhoyInstruction::ClearScreen => {
-                self.current_frame = [0; DISPLAY_WIDTH];
+                self.current_frame = [0; DISPLAY_HEIGHT];
             }
             AhoyInstruction::Jump(addr) => {
                 self.counter = addr;
@@ -104,7 +104,7 @@ impl Ahoy {
                 let sprite_end = sprite_start + sprite_height as usize;
                 let sprite = self.memory[sprite_start..sprite_end]
                     .iter()
-                    .fold(0_u32, |sprite, b| (sprite << 1) | *b as u32);
+                    .fold(0_u64, |sprite, b| (sprite << 1) | *b as u64);
 
                 self.registers[FLAG_REGISTER] =
                     u8::from(((self.current_frame[x] >> y) & sprite) > 0);
@@ -121,7 +121,10 @@ impl Ahoy {
 mod tests {
     use std::io::{BufReader, Cursor};
 
-    use crate::{Ahoy, instructions::AhoyInstruction};
+    use crate::{
+        Ahoy, constants::PROGRAM_MEMORY_START, display::DISPLAY_HEIGHT,
+        instructions::AhoyInstruction,
+    };
 
     #[test]
     fn load_normal_program() {
@@ -214,12 +217,12 @@ mod tests {
     #[test]
     fn instruction_clear_screen_sets_frame_to_zeroes() {
         let mut ahoy = Ahoy {
-            current_frame: [1; 64],
+            current_frame: [1; DISPLAY_HEIGHT],
             ..Default::default()
         };
         ahoy.execute(AhoyInstruction::ClearScreen).unwrap();
 
-        assert_eq!(ahoy.current_frame, [0_u32; 64]);
+        assert_eq!(ahoy.current_frame, [0_u64; DISPLAY_HEIGHT]);
     }
 
     #[test]
@@ -278,43 +281,29 @@ mod tests {
     #[test]
     fn instruction_display_sets_value_on_empty_frame() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..32].copy_from_slice(&[1; 32]);
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 2].copy_from_slice(&[0xFF; 2]);
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
             y_register: 0,
-            sprite_height: 15,
+            sprite_height: 2,
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 32_767);
-        assert_eq!(ahoy.current_frame[1..], [0_u32; 63]);
-    }
-
-    #[test]
-    fn instruction_display_sets_arbitraty_sprite_on_empty_frame() {
-        let mut ahoy = Ahoy::default();
-        ahoy.memory[0..32].copy_from_slice(&[
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1,
-            0, 0, 1,
-        ]);
-        ahoy.index = 17;
-
-        ahoy.execute(AhoyInstruction::Display {
-            x_register: 0,
-            y_register: 0,
-            sprite_height: 15,
-        })
-        .unwrap();
-
-        assert_eq!(ahoy.current_frame[0], 1337);
+        assert_eq!(ahoy.current_frame[0], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[1], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[2], 0x0000000000000000);
     }
 
     #[test]
     fn instruction_display_treats_sprite_zero_bits_as_transparent() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
-        ahoy.current_frame[0] = 0b0110;
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 4]
+            .copy_from_slice(&[0xFF, 0, 0, 0xFF]);
+        ahoy.current_frame[0] = 0x0000000000000000;
+        ahoy.current_frame[1] = 0xFFFFFFFFFFFFFFFF;
+        ahoy.current_frame[2] = 0xFF00000FF00000FF;
+        ahoy.current_frame[3] = 0x0000000000000000;
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
@@ -323,14 +312,16 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 15);
+        assert_eq!(ahoy.current_frame[0], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[1], 0xFFFFFFFFFFFFFFFF);
+        assert_eq!(ahoy.current_frame[2], 0xFF00000FF00000FF);
+        assert_eq!(ahoy.current_frame[3], 0xFF00000000000000);
     }
 
     #[test]
     fn instruction_display_considers_y_for_offset() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
-        ahoy.current_frame[0] = 0b10010110;
+        ahoy.memory[0..4].copy_from_slice(&[0xFF, 0, 0, 0xFF]);
         ahoy.registers[0xA] = 4;
 
         ahoy.execute(AhoyInstruction::Display {
@@ -340,38 +331,48 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 6);
+        assert_eq!(ahoy.current_frame[0], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[1], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[2], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[3], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[4], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[5], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[6], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[7], 0xFF00000000000000);
     }
 
     #[test]
     fn instruction_display_sets_the_flag_register_when_a_bit_turned_off() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
-        ahoy.current_frame[0] = 0b10010110;
-        ahoy.registers[0xA] = 4;
+        ahoy.memory[0..4].copy_from_slice(&[0xFF, 0, 0, 0]);
+        ahoy.current_frame[0] = 0xFFFFFFFFFFFFFFFF;
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
-            y_register: 0xA,
+            y_register: 0,
             sprite_height: 4,
         })
         .unwrap();
 
         assert_eq!(ahoy.registers[0xF], 1);
+        assert_eq!(ahoy.current_frame[0], 0xFF00000000000000);
     }
 
     #[test]
     fn instruction_display_unsets_the_flag_register_when_a_bits_were_only_turned_on() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..32].copy_from_slice(&[1; 32]);
+        ahoy.memory[0..4].copy_from_slice(&[0xFF, 0, 0, 0]);
+        ahoy.current_frame[0] = 0x00FFFFFFFFFFFFFF;
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
             y_register: 0,
-            sprite_height: 15,
+            sprite_height: 4,
         })
         .unwrap();
+
         assert_eq!(ahoy.registers[0xF], 0);
+        assert_eq!(ahoy.current_frame[0], 0xFFFFFFFFFFFFFFFF);
     }
 
     #[test]

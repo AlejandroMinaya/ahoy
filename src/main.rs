@@ -3,7 +3,7 @@ mod display;
 use std::path::PathBuf;
 
 use crossterm::event::{self, Event};
-use display::{AhoyDisplay, DISPLAY_WIDTH, RatatuiAhoyDisplay};
+use display::{AhoyDisplay, DISPLAY_HEIGHT, RatatuiAhoyDisplay};
 use ratatui::{
     self,
     style::Color,
@@ -20,7 +20,7 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let mut display = RatatuiAhoyDisplay::default();
     loop {
-        display.draw(&[0; DISPLAY_WIDTH])?;
+        display.draw(&[0; DISPLAY_HEIGHT])?;
         if matches!(event::read()?, Event::Key(_)) {
             break;
         }
