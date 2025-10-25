@@ -103,17 +103,15 @@ impl Ahoy {
                 let row = self.registers[y_register] as usize % DISPLAY_HEIGHT;
                 let col = self.registers[x_register] as usize % DISPLAY_WIDTH;
 
-                for (row_number, sprite_row) in
+                for (row_offset, sprite_row) in
                     self.memory[sprite_start..sprite_end].iter().enumerate()
                 {
-                    self.current_frame[row + row_number] ^= (*sprite_row as u64) << col;
-                    println!(
-                        "ROW #: {}, COL: {}, SPRITE_ROW: {}, FRAME: {:?}",
-                        row + row_number,
-                        col,
-                        sprite_row,
-                        self.current_frame[row]
-                    );
+                    let curr_row = row + row_offset;
+                    let prev_zero_count = self.current_frame[curr_row].count_zeros();
+                    self.current_frame[curr_row] ^= (*sprite_row as u64) << col;
+                    if (self.current_frame[curr_row].count_zeros() > prev_zero_count) {
+                        self.registers[FLAG_REGISTER] = 1;
+                    }
                 }
             }
             _ => todo!(),
@@ -350,7 +348,8 @@ mod tests {
     #[test]
     fn instruction_display_sets_the_flag_register_when_a_bit_turned_off() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..4].copy_from_slice(&[0xFF, 0, 0, 0]);
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 4]
+            .copy_from_slice(&[0xFF, 0, 0, 0]);
         ahoy.current_frame[0] = 0xFFFFFFFFFFFFFFFF;
 
         ahoy.execute(AhoyInstruction::Display {
@@ -361,7 +360,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(ahoy.registers[0xF], 1);
-        assert_eq!(ahoy.current_frame[0], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[0], 0xFFFFFFFFFFFFFF00);
     }
 
     #[test]
