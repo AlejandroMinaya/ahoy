@@ -3,7 +3,7 @@ mod display;
 mod instructions;
 
 use anyhow::anyhow;
-use constants::FLAG_REGISTER;
+use constants::{FLAG_REGISTER, PROGRAM_MEMORY_START};
 use display::{AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 use instructions::AhoyInstruction;
 use std::{collections::VecDeque, io::BufRead};
@@ -28,7 +28,7 @@ impl Default for Ahoy {
         Ahoy {
             memory,
             registers: [0; 16],
-            index: 0,
+            index: PROGRAM_MEMORY_START as u16,
             counter: 0,
             stack: VecDeque::with_capacity(256),
             delay_timer: 0,
@@ -97,19 +97,21 @@ impl Ahoy {
                 y_register,
                 sprite_height,
             } => {
-                let x = self.registers[x_register] as usize % DISPLAY_WIDTH;
-                let y = self.registers[y_register] as usize % DISPLAY_HEIGHT;
-
                 let sprite_start = self.index as usize;
                 let sprite_end = sprite_start + sprite_height as usize;
-                let sprite = self.memory[sprite_start..sprite_end]
-                    .iter()
-                    .fold(0_u64, |sprite, b| (sprite << 1) | *b as u64);
 
-                self.registers[FLAG_REGISTER] =
-                    u8::from(((self.current_frame[x] >> y) & sprite) > 0);
+                let row = self.registers[y_register] as usize % DISPLAY_HEIGHT;
+                let col = self.registers[x_register] as usize % DISPLAY_WIDTH;
 
-                self.current_frame[x] ^= sprite << y;
+                for (row_number, sprite_row) in
+                    self.memory[sprite_start..sprite_end].iter().enumerate()
+                {
+                    self.current_frame[row + row_number] ^= (*sprite_row as u64) << col;
+                    println!(
+                        "ROW: {}, COL: {}, ROW_NUMBER: {}, SPRITE_ROW: {}, FRAME: {:?}",
+                        row, col, row_number, sprite_row, self.current_frame[row]
+                    );
+                }
             }
             _ => todo!(),
         };
@@ -290,8 +292,8 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 0xFF00000000000000);
-        assert_eq!(ahoy.current_frame[1], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[0], 0x00000000000000FF);
+        assert_eq!(ahoy.current_frame[1], 0x00000000000000FF);
         assert_eq!(ahoy.current_frame[2], 0x0000000000000000);
     }
 
