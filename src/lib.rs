@@ -108,8 +108,11 @@ impl Ahoy {
                 {
                     self.current_frame[row + row_number] ^= (*sprite_row as u64) << col;
                     println!(
-                        "ROW: {}, COL: {}, ROW_NUMBER: {}, SPRITE_ROW: {}, FRAME: {:?}",
-                        row, col, row_number, sprite_row, self.current_frame[row]
+                        "ROW #: {}, COL: {}, SPRITE_ROW: {}, FRAME: {:?}",
+                        row + row_number,
+                        col,
+                        sprite_row,
+                        self.current_frame[row]
                     );
                 }
             }
@@ -323,7 +326,8 @@ mod tests {
     #[test]
     fn instruction_display_considers_y_for_offset() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..4].copy_from_slice(&[0xFF, 0, 0, 0xFF]);
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 4]
+            .copy_from_slice(&[0xFF, 0, 0, 0xFF]);
         ahoy.registers[0xA] = 4;
 
         ahoy.execute(AhoyInstruction::Display {
@@ -337,10 +341,10 @@ mod tests {
         assert_eq!(ahoy.current_frame[1], 0x0000000000000000);
         assert_eq!(ahoy.current_frame[2], 0x0000000000000000);
         assert_eq!(ahoy.current_frame[3], 0x0000000000000000);
-        assert_eq!(ahoy.current_frame[4], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[4], 0x00000000000000FF);
         assert_eq!(ahoy.current_frame[5], 0x0000000000000000);
         assert_eq!(ahoy.current_frame[6], 0x0000000000000000);
-        assert_eq!(ahoy.current_frame[7], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[7], 0x00000000000000FF);
     }
 
     #[test]
