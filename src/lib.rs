@@ -317,10 +317,10 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[0], 0x00000000000000FF);
         assert_eq!(ahoy.current_frame[1], 0xFFFFFFFFFFFFFFFF);
         assert_eq!(ahoy.current_frame[2], 0xFF00000FF00000FF);
-        assert_eq!(ahoy.current_frame[3], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[3], 0x00000000000000FF);
     }
 
     #[test]
