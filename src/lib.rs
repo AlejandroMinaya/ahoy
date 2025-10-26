@@ -351,14 +351,13 @@ mod tests {
     fn instruction_display_sets_the_flag_to_zero_for_no_turned_off_bits() {
         let mut ahoy = Ahoy::default();
         ahoy.registers[FLAG_REGISTER] = 1;
-        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 4]
-            .copy_from_slice(&[0x00, 0, 0, 0]);
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 1].copy_from_slice(&[0]);
         ahoy.current_frame[0] = 0xFFFFFFFFFFFFFFFF;
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
             y_register: 0,
-            sprite_height: 4,
+            sprite_height: 1,
         })
         .unwrap();
 
@@ -369,14 +368,13 @@ mod tests {
     #[test]
     fn instruction_display_sets_the_flag_register_when_a_bit_turned_off() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 4]
-            .copy_from_slice(&[0xFF, 0, 0, 0]);
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 1].copy_from_slice(&[0xFF]);
         ahoy.current_frame[0] = 0xFFFFFFFFFFFFFFFF;
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
             y_register: 0,
-            sprite_height: 4,
+            sprite_height: 1,
         })
         .unwrap();
 
