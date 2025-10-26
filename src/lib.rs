@@ -97,6 +97,8 @@ impl Ahoy {
                 y_register,
                 sprite_height,
             } => {
+                self.registers[FLAG_REGISTER] = 0;
+
                 let sprite_start = self.index as usize;
                 let sprite_end = sprite_start + sprite_height as usize;
 
@@ -125,7 +127,7 @@ mod tests {
     use std::io::{BufReader, Cursor};
 
     use crate::{
-        Ahoy, constants::PROGRAM_MEMORY_START, display::DISPLAY_HEIGHT,
+        Ahoy, FLAG_REGISTER, constants::PROGRAM_MEMORY_START, display::DISPLAY_HEIGHT,
         instructions::AhoyInstruction,
     };
 
@@ -343,6 +345,25 @@ mod tests {
         assert_eq!(ahoy.current_frame[5], 0x0000000000000000);
         assert_eq!(ahoy.current_frame[6], 0x0000000000000000);
         assert_eq!(ahoy.current_frame[7], 0x00000000000000FF);
+    }
+
+    #[test]
+    fn instruction_display_sets_the_flag_to_zero_for_no_turned_off_bits() {
+        let mut ahoy = Ahoy::default();
+        ahoy.registers[FLAG_REGISTER] = 1;
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 4]
+            .copy_from_slice(&[0x00, 0, 0, 0]);
+        ahoy.current_frame[0] = 0xFFFFFFFFFFFFFFFF;
+
+        ahoy.execute(AhoyInstruction::Display {
+            x_register: 0,
+            y_register: 0,
+            sprite_height: 4,
+        })
+        .unwrap();
+
+        assert_eq!(ahoy.registers[FLAG_REGISTER], 0);
+        assert_eq!(ahoy.current_frame[0], 0xFFFFFFFFFFFFFFFF);
     }
 
     #[test]
