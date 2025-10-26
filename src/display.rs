@@ -5,7 +5,8 @@ use ratatui::{
 
 pub const DISPLAY_WIDTH: usize = 64;
 pub const DISPLAY_HEIGHT: usize = 32;
-pub type AhoyFrame = [u32; DISPLAY_WIDTH];
+pub const SPRITE_WIDTH: usize = 8;
+pub type AhoyFrame = [u64; DISPLAY_HEIGHT];
 
 pub trait AhoyDisplay {
     fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()>;
@@ -52,24 +53,23 @@ impl Default for Size {
 
 impl AhoyDisplay for RatatuiAhoyDisplay {
     fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()> {
-        let rectangle_size = Size::default().scale(10.0);
+        let rectangle_size = Size::new(1.0, 1.0);
         let display_size = Size::new(
-            64_f64 * rectangle_size.width,
-            32_f64 * rectangle_size.height,
+            DISPLAY_WIDTH as f64 * rectangle_size.width * 1.0,
+            DISPLAY_HEIGHT as f64 * rectangle_size.height * 1.0,
         );
         self.terminal.draw(|ratatui_frame| {
             let area = ratatui_frame.area();
             ratatui_frame.render_widget(
                 Canvas::default()
-                    .marker(ratatui::symbols::Marker::Dot)
+                    .marker(ratatui::symbols::Marker::Block)
                     .paint(|ctx| {
-                        for i in 0..32_u8 {
-                            for j in 0..64_u8 {
-                                let row = 31_usize - usize::from(i);
-                                let pixel = frame[row] >> (63 - j);
+                        for (row_number, row) in frame.iter().rev().enumerate() {
+                            for col in 0..DISPLAY_WIDTH {
+                                let pixel = row >> col;
                                 ctx.draw(&Rectangle {
-                                    y: (rectangle_size.height * i as f64),
-                                    x: (rectangle_size.width * j as f64),
+                                    x: (rectangle_size.width * (DISPLAY_WIDTH - 1 - col) as f64),
+                                    y: (rectangle_size.height * row_number as f64),
                                     width: rectangle_size.width,
                                     height: rectangle_size.height,
                                     color: if pixel & 0b1 == 1 {

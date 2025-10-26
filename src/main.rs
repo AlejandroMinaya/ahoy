@@ -1,9 +1,11 @@
 mod display;
 
-use std::path::PathBuf;
+use std::{fs::File, io::BufReader, path::PathBuf, time::Duration};
 
+use ahoy::Ahoy;
+use cli_log::init_cli_log;
 use crossterm::event::{self, Event};
-use display::{AhoyDisplay, DISPLAY_WIDTH, RatatuiAhoyDisplay};
+use display::{AhoyDisplay, DISPLAY_HEIGHT, RatatuiAhoyDisplay};
 use ratatui::{
     self,
     style::Color,
@@ -18,10 +20,20 @@ struct Args {
     program: PathBuf,
 }
 fn main() -> anyhow::Result<()> {
+    init_cli_log!();
+
+    let args = Args::parse();
+    let file = File::open(args.program)?;
+    let mut reader = BufReader::new(file);
+
+    let mut ahoy = Ahoy::default();
+    ahoy.load(&mut reader)?;
+
     let mut display = RatatuiAhoyDisplay::default();
     loop {
-        display.draw(&[0; DISPLAY_WIDTH])?;
-        if matches!(event::read()?, Event::Key(_)) {
+        ahoy.process()?;
+        display.draw(&ahoy.current_frame)?;
+        if event::poll(Duration::from_millis(2))? && matches!(event::read()?, Event::Key(_)) {
             break;
         }
     }

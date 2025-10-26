@@ -3,20 +3,21 @@ mod display;
 mod instructions;
 
 use anyhow::anyhow;
-use constants::FLAG_REGISTER;
-use display::{AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH};
+use cli_log::debug;
+use constants::{FLAG_REGISTER, MAX_MEMORY, PROGRAM_MEMORY_START};
+use display::{AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH, SPRITE_WIDTH};
 use instructions::AhoyInstruction;
 use std::{collections::VecDeque, io::BufRead};
 
 pub struct Ahoy {
     memory: [u8; constants::MAX_MEMORY],
     registers: [u8; 16],
-    index: u16,
+    index: usize,
     counter: usize,
     stack: VecDeque<u16>,
     delay_timer: u8,
     sound_timer: u8,
-    current_frame: AhoyFrame,
+    pub current_frame: AhoyFrame,
 }
 
 impl Default for Ahoy {
@@ -28,12 +29,12 @@ impl Default for Ahoy {
         Ahoy {
             memory,
             registers: [0; 16],
-            index: 0,
-            counter: 0,
+            index: PROGRAM_MEMORY_START,
+            counter: PROGRAM_MEMORY_START,
             stack: VecDeque::with_capacity(256),
             delay_timer: 0,
             sound_timer: 0,
-            current_frame: [0; 64],
+            current_frame: [0; DISPLAY_HEIGHT],
         }
     }
 }
@@ -62,28 +63,40 @@ impl Ahoy {
         Ok(())
     }
 
-    fn fetch(&mut self) -> u16 {
-        let usize_counter = self.counter as usize;
+    pub fn process(&mut self) -> anyhow::Result<()> {
+        debug!("PROGRAM COUNTER: {:X?}", self.counter);
 
-        let first_nibble = self.memory[usize_counter] as u16;
-        let second_nibble = self.memory[usize_counter + 1] as u16;
+        let instruction = AhoyInstruction::from(self.fetch());
+        debug!("FETCHED: {:?}", instruction);
+
+        self.execute(instruction)?;
+
+        Ok(())
+    }
+
+    fn fetch(&mut self) -> u16 {
+        let first_nibble = self.memory[self.counter] as u16;
+        let second_nibble = self.memory[self.counter + 1] as u16;
+        debug!("FETCH > FIRST NIBBLE: {:X?}", first_nibble);
+        debug!("FETCH > SECOND NIBBLE: {:X?}", second_nibble);
 
         let instruction = (first_nibble << 8) | second_nibble;
+        debug!("FETCH > INSTRUCTION: {:X?}", instruction);
 
-        self.counter = (self.counter + 2) % constants::MAX_MEMORY;
+        self.counter = ((self.counter + 2) % MAX_MEMORY).max(PROGRAM_MEMORY_START);
         instruction
     }
 
     fn execute(&mut self, instruction: AhoyInstruction) -> anyhow::Result<()> {
         match instruction {
             AhoyInstruction::ClearScreen => {
-                self.current_frame = [0; DISPLAY_WIDTH];
+                self.current_frame = [0; DISPLAY_HEIGHT];
             }
             AhoyInstruction::Jump(addr) => {
                 self.counter = addr;
             }
             AhoyInstruction::SetIndex(value) => {
-                self.index = value;
+                self.index = value as usize;
             }
             AhoyInstruction::SetRegister(register_addr, value) => {
                 self.registers[register_addr] = value;
@@ -97,21 +110,29 @@ impl Ahoy {
                 y_register,
                 sprite_height,
             } => {
-                let x = self.registers[x_register] as usize % DISPLAY_WIDTH;
-                let y = self.registers[y_register] as usize % DISPLAY_HEIGHT;
+                self.registers[FLAG_REGISTER] = 0;
 
-                let sprite_start = self.index as usize;
-                let sprite_end = sprite_start + sprite_height as usize;
-                let sprite = self.memory[sprite_start..sprite_end]
-                    .iter()
-                    .fold(0_u32, |sprite, b| (sprite << 1) | *b as u32);
+                let sprite_end = self.index + sprite_height as usize;
 
-                self.registers[FLAG_REGISTER] =
-                    u8::from(((self.current_frame[x] >> y) & sprite) > 0);
+                let row = self.registers[y_register] as usize % DISPLAY_HEIGHT;
+                let col = self.registers[x_register] as usize % DISPLAY_WIDTH;
+                let col_offset = DISPLAY_WIDTH - SPRITE_WIDTH - col;
 
-                self.current_frame[x] ^= sprite << y;
+                debug!("EXECUTE > DRAWING > ROW: {}, COL: {}", row, col);
+
+                for (row_offset, sprite_row) in
+                    self.memory[self.index..sprite_end].iter().enumerate()
+                {
+                    let curr_row = row + row_offset;
+
+                    let prev_zero_count = self.current_frame[curr_row].count_zeros();
+                    self.current_frame[curr_row] ^= (*sprite_row as u64) << col_offset;
+                    if self.current_frame[curr_row].count_zeros() > prev_zero_count {
+                        self.registers[FLAG_REGISTER] = 1;
+                    }
+                }
             }
-            _ => todo!(),
+            _ => debug!("Ignoring this instruction: {:X?}", instruction),
         };
         Ok(())
     }
@@ -121,7 +142,10 @@ impl Ahoy {
 mod tests {
     use std::io::{BufReader, Cursor};
 
-    use crate::{Ahoy, instructions::AhoyInstruction};
+    use crate::{
+        Ahoy, FLAG_REGISTER, constants::PROGRAM_MEMORY_START, display::DISPLAY_HEIGHT,
+        instructions::AhoyInstruction,
+    };
 
     #[test]
     fn load_normal_program() {
@@ -167,10 +191,10 @@ mod tests {
         let mut ahoy = Ahoy::default();
 
         ahoy.fetch();
-        assert_eq!(ahoy.counter, 2_usize);
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START + 2);
 
         ahoy.fetch();
-        assert_eq!(ahoy.counter, 4_usize);
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START + 4);
     }
 
     #[test]
@@ -181,15 +205,15 @@ mod tests {
         };
 
         ahoy.fetch();
-        assert_eq!(ahoy.counter, 0);
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START);
 
         ahoy.fetch();
-        assert_eq!(ahoy.counter, 2);
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START + 2);
     }
     #[test]
     fn fetch_retrieves_expected_bytes_from_memory_beginning() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..2].copy_from_slice(&[0xF0, 0x0F]);
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 2].copy_from_slice(&[0xF0, 0x0F]);
 
         let expected_instruction = 0xF00F;
 
@@ -214,12 +238,12 @@ mod tests {
     #[test]
     fn instruction_clear_screen_sets_frame_to_zeroes() {
         let mut ahoy = Ahoy {
-            current_frame: [1; 64],
+            current_frame: [1; DISPLAY_HEIGHT],
             ..Default::default()
         };
         ahoy.execute(AhoyInstruction::ClearScreen).unwrap();
 
-        assert_eq!(ahoy.current_frame, [0_u32; 64]);
+        assert_eq!(ahoy.current_frame, [0_u64; DISPLAY_HEIGHT]);
     }
 
     #[test]
@@ -278,43 +302,29 @@ mod tests {
     #[test]
     fn instruction_display_sets_value_on_empty_frame() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..32].copy_from_slice(&[1; 32]);
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 2].copy_from_slice(&[0xFF; 2]);
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
             y_register: 0,
-            sprite_height: 15,
+            sprite_height: 2,
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 32_767);
-        assert_eq!(ahoy.current_frame[1..], [0_u32; 63]);
-    }
-
-    #[test]
-    fn instruction_display_sets_arbitraty_sprite_on_empty_frame() {
-        let mut ahoy = Ahoy::default();
-        ahoy.memory[0..32].copy_from_slice(&[
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1,
-            0, 0, 1,
-        ]);
-        ahoy.index = 17;
-
-        ahoy.execute(AhoyInstruction::Display {
-            x_register: 0,
-            y_register: 0,
-            sprite_height: 15,
-        })
-        .unwrap();
-
-        assert_eq!(ahoy.current_frame[0], 1337);
+        assert_eq!(ahoy.current_frame[0], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[1], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[2], 0x0000000000000000);
     }
 
     #[test]
     fn instruction_display_treats_sprite_zero_bits_as_transparent() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
-        ahoy.current_frame[0] = 0b0110;
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 4]
+            .copy_from_slice(&[0xFF, 0, 0, 0xFF]);
+        ahoy.current_frame[0] = 0x0000000000000000;
+        ahoy.current_frame[1] = 0xFFFFFFFFFFFFFFFF;
+        ahoy.current_frame[2] = 0xFF00000FF00000FF;
+        ahoy.current_frame[3] = 0x0000000000000000;
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
@@ -323,14 +333,17 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 15);
+        assert_eq!(ahoy.current_frame[0], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[1], 0xFFFFFFFFFFFFFFFF);
+        assert_eq!(ahoy.current_frame[2], 0xFF00000FF00000FF);
+        assert_eq!(ahoy.current_frame[3], 0xFF00000000000000);
     }
 
     #[test]
     fn instruction_display_considers_y_for_offset() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
-        ahoy.current_frame[0] = 0b10010110;
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 4]
+            .copy_from_slice(&[0xFF, 0, 0, 0xFF]);
         ahoy.registers[0xA] = 4;
 
         ahoy.execute(AhoyInstruction::Display {
@@ -340,38 +353,49 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 6);
+        assert_eq!(ahoy.current_frame[0], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[1], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[2], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[3], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[4], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[5], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[6], 0x0000000000000000);
+        assert_eq!(ahoy.current_frame[7], 0xFF00000000000000);
     }
 
     #[test]
     fn instruction_display_sets_the_flag_register_when_a_bit_turned_off() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..4].copy_from_slice(&[1, 0, 0, 1]);
-        ahoy.current_frame[0] = 0b10010110;
-        ahoy.registers[0xA] = 4;
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 1].copy_from_slice(&[0xFF]);
+        ahoy.current_frame[0] = 0xFFFFFFFFFFFFFFFF;
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
-            y_register: 0xA,
-            sprite_height: 4,
+            y_register: 0,
+            sprite_height: 1,
         })
         .unwrap();
 
         assert_eq!(ahoy.registers[0xF], 1);
+        assert_eq!(ahoy.current_frame[0], 0x00FFFFFFFFFFFFFF);
     }
 
     #[test]
     fn instruction_display_unsets_the_flag_register_when_a_bits_were_only_turned_on() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..32].copy_from_slice(&[1; 32]);
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 1].copy_from_slice(&[0xFF]);
+        ahoy.registers[FLAG_REGISTER] = 1;
+        ahoy.current_frame[0] = 0x00FFFFFFFFFFFFFF;
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,
             y_register: 0,
-            sprite_height: 15,
+            sprite_height: 1,
         })
         .unwrap();
-        assert_eq!(ahoy.registers[0xF], 0);
+
+        assert_eq!(ahoy.registers[FLAG_REGISTER], 0);
+        assert_eq!(ahoy.current_frame[0], 0xFFFFFFFFFFFFFFFF);
     }
 
     #[test]
@@ -379,6 +403,6 @@ mod tests {
         let mut ahoy = Ahoy::default();
         ahoy.execute(AhoyInstruction::SetIndex(1023)).unwrap();
 
-        assert_eq!(ahoy.index, 1023_u16);
+        assert_eq!(ahoy.index, 1023_usize);
     }
 }

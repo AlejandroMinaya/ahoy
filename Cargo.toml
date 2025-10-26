@@ -6,5 +6,6 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.99"
 clap = { version = "4.5.47", features = ["derive"] }
+cli-log = "2.1.0"
 crossterm = "0.29.0"
 ratatui = "0.29.0"
