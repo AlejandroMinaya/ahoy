@@ -111,7 +111,7 @@ impl Ahoy {
                     let curr_row = row + row_offset;
                     let prev_zero_count = self.current_frame[curr_row].count_zeros();
                     self.current_frame[curr_row] ^= (*sprite_row as u64) << col;
-                    if (self.current_frame[curr_row].count_zeros() > prev_zero_count) {
+                    if self.current_frame[curr_row].count_zeros() > prev_zero_count {
                         self.registers[FLAG_REGISTER] = 1;
                     }
                 }

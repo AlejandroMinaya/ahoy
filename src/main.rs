@@ -20,7 +20,7 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let mut display = RatatuiAhoyDisplay::default();
     loop {
-        display.draw(&[0; DISPLAY_HEIGHT])?;
+        display.draw(&[0xFF00FF; DISPLAY_HEIGHT])?;
         if matches!(event::read()?, Event::Key(_)) {
             break;
         }
