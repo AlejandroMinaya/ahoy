@@ -3,7 +3,8 @@ mod display;
 mod instructions;
 
 use anyhow::anyhow;
-use constants::{FLAG_REGISTER, PROGRAM_MEMORY_START};
+use cli_log::debug;
+use constants::{FLAG_REGISTER, MAX_MEMORY, PROGRAM_MEMORY_START};
 use display::{AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 use instructions::AhoyInstruction;
 use std::{collections::VecDeque, io::BufRead};
@@ -16,7 +17,7 @@ pub struct Ahoy {
     stack: VecDeque<u16>,
     delay_timer: u8,
     sound_timer: u8,
-    current_frame: AhoyFrame,
+    pub current_frame: AhoyFrame,
 }
 
 impl Default for Ahoy {
@@ -62,12 +63,25 @@ impl Ahoy {
         Ok(())
     }
 
-    fn fetch(&mut self) -> u16 {
+    pub fn process(&mut self) -> anyhow::Result<()> {
+        debug!("PROGRAM COUNTER: {:X?}", self.counter);
 
+        let instruction = AhoyInstruction::from(self.fetch());
+        debug!("FETCHED: {:?}", instruction);
+
+        self.execute(instruction)?;
+
+        Ok(())
+    }
+
+    fn fetch(&mut self) -> u16 {
         let first_nibble = self.memory[self.counter] as u16;
         let second_nibble = self.memory[self.counter + 1] as u16;
+        debug!("FETCH > FIRST NIBBLE: {:X?}", first_nibble);
+        debug!("FETCH > SECOND NIBBLE: {:X?}", second_nibble);
 
         let instruction = (first_nibble << 8) | second_nibble;
+        debug!("FETCH > INSTRUCTION: {:X?}", instruction);
 
         self.counter = ((self.counter + 2) % MAX_MEMORY).max(PROGRAM_MEMORY_START);
         instruction
@@ -115,7 +129,7 @@ impl Ahoy {
                     }
                 }
             }
-            _ => todo!(),
+            _ => debug!("Ignoring this instruction: {:X?}", instruction),
         };
         Ok(())
     }

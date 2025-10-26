@@ -1,3 +1,4 @@
+#[derive(Debug)]
 #[repr(u16)]
 pub enum AhoyInstruction {
     Jump(usize),
@@ -12,7 +13,7 @@ pub enum AhoyInstruction {
     },
     ClearScreen = 0x00E0,
     StopSubroutine = 0x00EE,
-    UnknownInstruction,
+    UnknownInstruction(u16),
 }
 
 trait RegisterInstruction {
@@ -47,7 +48,7 @@ impl From<u16> for AhoyInstruction {
                     y_register: ((instruction >> 4) & 0xF) as usize,
                     sprite_height: (instruction & 0xF) as u8,
                 },
-                _ => Self::UnknownInstruction,
+                _ => Self::UnknownInstruction(instruction),
             },
         }
     }
