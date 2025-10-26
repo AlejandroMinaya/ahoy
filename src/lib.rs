@@ -29,7 +29,7 @@ impl Default for Ahoy {
             memory,
             registers: [0; 16],
             index: PROGRAM_MEMORY_START as u16,
-            counter: 0,
+            counter: PROGRAM_MEMORY_START,
             stack: VecDeque::with_capacity(256),
             delay_timer: 0,
             sound_timer: 0,
@@ -63,14 +63,13 @@ impl Ahoy {
     }
 
     fn fetch(&mut self) -> u16 {
-        let usize_counter = self.counter as usize;
 
-        let first_nibble = self.memory[usize_counter] as u16;
-        let second_nibble = self.memory[usize_counter + 1] as u16;
+        let first_nibble = self.memory[self.counter] as u16;
+        let second_nibble = self.memory[self.counter + 1] as u16;
 
         let instruction = (first_nibble << 8) | second_nibble;
 
-        self.counter = (self.counter + 2) % constants::MAX_MEMORY;
+        self.counter = ((self.counter + 2) % MAX_MEMORY).max(PROGRAM_MEMORY_START);
         instruction
     }
 
@@ -175,10 +174,10 @@ mod tests {
         let mut ahoy = Ahoy::default();
 
         ahoy.fetch();
-        assert_eq!(ahoy.counter, 2_usize);
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START + 2);
 
         ahoy.fetch();
-        assert_eq!(ahoy.counter, 4_usize);
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START + 4);
     }
 
     #[test]
@@ -189,15 +188,15 @@ mod tests {
         };
 
         ahoy.fetch();
-        assert_eq!(ahoy.counter, 0);
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START);
 
         ahoy.fetch();
-        assert_eq!(ahoy.counter, 2);
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START + 2);
     }
     #[test]
     fn fetch_retrieves_expected_bytes_from_memory_beginning() {
         let mut ahoy = Ahoy::default();
-        ahoy.memory[0..2].copy_from_slice(&[0xF0, 0x0F]);
+        ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 2].copy_from_slice(&[0xF0, 0x0F]);
 
         let expected_instruction = 0xF00F;
 
