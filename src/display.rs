@@ -5,6 +5,7 @@ use ratatui::{
 
 pub const DISPLAY_WIDTH: usize = 64;
 pub const DISPLAY_HEIGHT: usize = 32;
+pub const SPRITE_WIDTH: usize = 8;
 pub type AhoyFrame = [u64; DISPLAY_HEIGHT];
 
 pub trait AhoyDisplay {

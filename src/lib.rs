@@ -5,14 +5,14 @@ mod instructions;
 use anyhow::anyhow;
 use cli_log::debug;
 use constants::{FLAG_REGISTER, MAX_MEMORY, PROGRAM_MEMORY_START};
-use display::{AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH};
+use display::{AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH, SPRITE_WIDTH};
 use instructions::AhoyInstruction;
 use std::{collections::VecDeque, io::BufRead};
 
 pub struct Ahoy {
     memory: [u8; constants::MAX_MEMORY],
     registers: [u8; 16],
-    index: u16,
+    index: usize,
     counter: usize,
     stack: VecDeque<u16>,
     delay_timer: u8,
@@ -29,7 +29,7 @@ impl Default for Ahoy {
         Ahoy {
             memory,
             registers: [0; 16],
-            index: PROGRAM_MEMORY_START as u16,
+            index: PROGRAM_MEMORY_START,
             counter: PROGRAM_MEMORY_START,
             stack: VecDeque::with_capacity(256),
             delay_timer: 0,
@@ -96,7 +96,7 @@ impl Ahoy {
                 self.counter = addr;
             }
             AhoyInstruction::SetIndex(value) => {
-                self.index = value;
+                self.index = value as usize;
             }
             AhoyInstruction::SetRegister(register_addr, value) => {
                 self.registers[register_addr] = value;
@@ -112,19 +112,21 @@ impl Ahoy {
             } => {
                 self.registers[FLAG_REGISTER] = 0;
 
-                let sprite_start = self.index as usize;
-                let sprite_end = sprite_start + sprite_height as usize;
+                let sprite_end = self.index + sprite_height as usize;
 
                 let row = self.registers[y_register] as usize % DISPLAY_HEIGHT;
                 let col = self.registers[x_register] as usize % DISPLAY_WIDTH;
+                let col_offset = DISPLAY_WIDTH - SPRITE_WIDTH - col;
+
                 debug!("EXECUTE > DRAWING > ROW: {}, COL: {}", row, col);
 
                 for (row_offset, sprite_row) in
-                    self.memory[sprite_start..sprite_end].iter().enumerate()
+                    self.memory[self.index..sprite_end].iter().enumerate()
                 {
                     let curr_row = row + row_offset;
+
                     let prev_zero_count = self.current_frame[curr_row].count_zeros();
-                    self.current_frame[curr_row] ^= (*sprite_row as u64) << (56 - col);
+                    self.current_frame[curr_row] ^= (*sprite_row as u64) << col_offset;
                     if self.current_frame[curr_row].count_zeros() > prev_zero_count {
                         self.registers[FLAG_REGISTER] = 1;
                     }
@@ -401,6 +403,6 @@ mod tests {
         let mut ahoy = Ahoy::default();
         ahoy.execute(AhoyInstruction::SetIndex(1023)).unwrap();
 
-        assert_eq!(ahoy.index, 1023_u16);
+        assert_eq!(ahoy.index, 1023_usize);
     }
 }

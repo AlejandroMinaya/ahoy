@@ -33,7 +33,7 @@ fn main() -> anyhow::Result<()> {
     loop {
         ahoy.process()?;
         display.draw(&ahoy.current_frame)?;
-        if event::poll(Duration::from_millis(125))? && matches!(event::read()?, Event::Key(_)) {
+        if event::poll(Duration::from_millis(2))? && matches!(event::read()?, Event::Key(_)) {
             break;
         }
     }
