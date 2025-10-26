@@ -117,6 +117,7 @@ impl Ahoy {
 
                 let row = self.registers[y_register] as usize % DISPLAY_HEIGHT;
                 let col = self.registers[x_register] as usize % DISPLAY_WIDTH;
+                debug!("EXECUTE > DRAWING > ROW: {}, COL: {}", row, col);
 
                 for (row_offset, sprite_row) in
                     self.memory[sprite_start..sprite_end].iter().enumerate()
