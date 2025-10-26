@@ -124,7 +124,7 @@ impl Ahoy {
                 {
                     let curr_row = row + row_offset;
                     let prev_zero_count = self.current_frame[curr_row].count_zeros();
-                    self.current_frame[curr_row] ^= (*sprite_row as u64) << col;
+                    self.current_frame[curr_row] ^= (*sprite_row as u64) << (56 - col);
                     if self.current_frame[curr_row].count_zeros() > prev_zero_count {
                         self.registers[FLAG_REGISTER] = 1;
                     }
@@ -309,8 +309,8 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 0x00000000000000FF);
-        assert_eq!(ahoy.current_frame[1], 0x00000000000000FF);
+        assert_eq!(ahoy.current_frame[0], 0xFF00000000000000);
+        assert_eq!(ahoy.current_frame[1], 0xFF00000000000000);
         assert_eq!(ahoy.current_frame[2], 0x0000000000000000);
     }
 
@@ -331,10 +331,10 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(ahoy.current_frame[0], 0x00000000000000FF);
+        assert_eq!(ahoy.current_frame[0], 0xFF00000000000000);
         assert_eq!(ahoy.current_frame[1], 0xFFFFFFFFFFFFFFFF);
         assert_eq!(ahoy.current_frame[2], 0xFF00000FF00000FF);
-        assert_eq!(ahoy.current_frame[3], 0x00000000000000FF);
+        assert_eq!(ahoy.current_frame[3], 0xFF00000000000000);
     }
 
     #[test]
@@ -355,10 +355,10 @@ mod tests {
         assert_eq!(ahoy.current_frame[1], 0x0000000000000000);
         assert_eq!(ahoy.current_frame[2], 0x0000000000000000);
         assert_eq!(ahoy.current_frame[3], 0x0000000000000000);
-        assert_eq!(ahoy.current_frame[4], 0x00000000000000FF);
+        assert_eq!(ahoy.current_frame[4], 0xFF00000000000000);
         assert_eq!(ahoy.current_frame[5], 0x0000000000000000);
         assert_eq!(ahoy.current_frame[6], 0x0000000000000000);
-        assert_eq!(ahoy.current_frame[7], 0x00000000000000FF);
+        assert_eq!(ahoy.current_frame[7], 0xFF00000000000000);
     }
 
     #[test]
@@ -375,7 +375,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(ahoy.registers[0xF], 1);
-        assert_eq!(ahoy.current_frame[0], 0xFFFFFFFFFFFFFF00);
+        assert_eq!(ahoy.current_frame[0], 0x00FFFFFFFFFFFFFF);
     }
 
     #[test]
@@ -383,7 +383,7 @@ mod tests {
         let mut ahoy = Ahoy::default();
         ahoy.memory[PROGRAM_MEMORY_START..PROGRAM_MEMORY_START + 1].copy_from_slice(&[0xFF]);
         ahoy.registers[FLAG_REGISTER] = 1;
-        ahoy.current_frame[0] = 0xFFFFFFFFFFFFFF00;
+        ahoy.current_frame[0] = 0x00FFFFFFFFFFFFFF;
 
         ahoy.execute(AhoyInstruction::Display {
             x_register: 0,

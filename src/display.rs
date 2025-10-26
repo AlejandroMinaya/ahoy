@@ -54,7 +54,7 @@ impl AhoyDisplay for RatatuiAhoyDisplay {
     fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()> {
         let rectangle_size = Size::new(1.0, 1.0);
         let display_size = Size::new(
-            DISPLAY_WIDTH as f64 * rectangle_size.width * 0.8,
+            DISPLAY_WIDTH as f64 * rectangle_size.width * 1.0,
             DISPLAY_HEIGHT as f64 * rectangle_size.height * 1.0,
         );
         self.terminal.draw(|ratatui_frame| {
@@ -63,11 +63,11 @@ impl AhoyDisplay for RatatuiAhoyDisplay {
                 Canvas::default()
                     .marker(ratatui::symbols::Marker::Block)
                     .paint(|ctx| {
-                        for (row_number, row) in frame.iter().enumerate() {
-                            for col in 0..32_usize {
+                        for (row_number, row) in frame.iter().rev().enumerate() {
+                            for col in 0..DISPLAY_WIDTH {
                                 let pixel = row >> col;
                                 ctx.draw(&Rectangle {
-                                    x: (rectangle_size.width * col as f64),
+                                    x: (rectangle_size.width * (DISPLAY_WIDTH - 1 - col) as f64),
                                     y: (rectangle_size.height * row_number as f64),
                                     width: rectangle_size.width,
                                     height: rectangle_size.height,
