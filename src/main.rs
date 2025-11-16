@@ -5,12 +5,7 @@ use std::{fs::File, io::BufReader, path::PathBuf, time::Duration};
 use ahoy::Ahoy;
 use cli_log::init_cli_log;
 use crossterm::event::{self, Event};
-use display::{AhoyDisplay, DISPLAY_HEIGHT, RatatuiAhoyDisplay};
-use ratatui::{
-    self,
-    style::Color,
-    widgets::canvas::{Canvas, Rectangle},
-};
+use display::{AhoyDisplay, ratatui_display::RatatuiAhoyDisplay};
 
 use clap::Parser;
 
