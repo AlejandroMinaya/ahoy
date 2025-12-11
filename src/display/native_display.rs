@@ -10,6 +10,8 @@ use winit::{
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+use super::AhoyDisplay;
+
 pub struct State {
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
@@ -149,14 +151,36 @@ pub struct NativeDisplay {
 }
 
 impl NativeDisplay {
-    pub fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>) -> Self {
+    pub fn new() -> anyhow::Result<Self> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            env_logger::init();
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            console_error_panic_hook::set_once();
+            console_log::init_with_level(log::Level::Info).unwrap_throw();
+        }
+
+        let event_loop = EventLoop::with_user_event().build()?;
+
         #[cfg(target_arch = "wasm32")]
         let proxy = Some(event_loop.create_proxy());
-        Self {
+        let mut display = Self {
             state: None,
             #[cfg(target_arch = "wasm32")]
             proxy,
-        }
+        };
+
+        event_loop.run_app(&mut display)?;
+        Ok(display)
+    }
+}
+
+impl AhoyDisplay for NativeDisplay {
+    fn draw(&mut self, frame: &super::AhoyFrame) -> anyhow::Result<()> {
+        Ok(())
     }
 }
 
@@ -252,35 +276,6 @@ impl ApplicationHandler<State> for NativeDisplay {
             _ => (),
         }
     }
-}
-pub fn run() -> anyhow::Result<()> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        env_logger::init();
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        console_log::init_with_level(log::Level::Info).unwrap_throw();
-    }
-
-    let event_loop = EventLoop::with_user_event().build()?;
-    let mut native_display = NativeDisplay::new(
-        #[cfg(target_arch = "wasm32")]
-        &event_loop,
-    );
-
-    event_loop.run_app(&mut native_display)?;
-
-    Ok(())
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn run_web() -> Result<(), wasm_bindgen::JsValue> {
-    console_error_panic_hook::set_once();
-    run().unwrap_throw();
-
-    Ok(())
 }
 
 #[cfg(test)]

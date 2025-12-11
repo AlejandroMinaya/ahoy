@@ -5,7 +5,7 @@ use std::{fs::File, io::BufReader, path::PathBuf, time::Duration};
 use ahoy::Ahoy;
 use cli_log::init_cli_log;
 use crossterm::event::{self, Event};
-use display::{AhoyDisplay, ratatui_display::RatatuiAhoyDisplay};
+use display::{AhoyDisplay, native_display::NativeDisplay, ratatui_display::RatatuiAhoyDisplay};
 
 use clap::Parser;
 
@@ -24,7 +24,8 @@ fn main() -> anyhow::Result<()> {
     let mut ahoy = Ahoy::default();
     ahoy.load(&mut reader)?;
 
-    let mut display = RatatuiAhoyDisplay::default();
+    // let mut display = RatatuiAhoyDisplay::default();
+    let mut display = NativeDisplay::new()?;
     loop {
         ahoy.process()?;
         display.draw(&ahoy.current_frame)?;
