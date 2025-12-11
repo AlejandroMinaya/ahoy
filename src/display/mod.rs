@@ -1,3 +1,4 @@
+pub mod native_display;
 pub mod ratatui_display;
 
 pub const DISPLAY_WIDTH: usize = 64;
