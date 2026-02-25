@@ -120,6 +120,8 @@ impl State {
                 mask: !0,
                 alpha_to_coverage_enabled: false,
             },
+            multiview: None,
+            cache: None,
         });
 
         Ok(Self {
@@ -161,7 +163,7 @@ impl State {
                 label: Some("Render Encoder"),
             });
         {
-            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
@@ -181,8 +183,10 @@ impl State {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
-        }
 
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.draw(0..3, 0..1);
+        }
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
