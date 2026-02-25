@@ -26,8 +26,20 @@ fn main() -> anyhow::Result<()> {
 
     // let mut display = RatatuiAhoyDisplay::default();
     let mut display = NativeDisplay::new()?;
-    ahoy.process()?;
-    display.draw(&ahoy.current_frame)?;
+    /* TODO:
+     * You have two competing app loops. The one below this comment with its own key handling,
+     * and the one within the NativeDisplay event_loop. I believe it makes sense to choose only
+     * one or to add to the AhoyDisplay a looping/event-handling situation since for ratatui
+     * it makes sense to use the crossterm events but for wgpu it makes sense to use the
+     * winit events.
+     * */
+    loop {
+        ahoy.process()?;
+        display.draw(&ahoy.current_frame)?;
+        if event::poll(Duration::from_millis(2))? && matches!(event::read()?, Event::Key(_)) {
+            break;
+        }
+    }
     ratatui::restore();
     Ok(())
 }
