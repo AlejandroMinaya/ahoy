@@ -26,13 +26,8 @@ fn main() -> anyhow::Result<()> {
 
     // let mut display = RatatuiAhoyDisplay::default();
     let mut display = NativeDisplay::new()?;
-    loop {
-        ahoy.process()?;
-        display.draw(&ahoy.current_frame)?;
-        if event::poll(Duration::from_millis(2))? && matches!(event::read()?, Event::Key(_)) {
-            break;
-        }
-    }
+    ahoy.process()?;
+    display.draw(&ahoy.current_frame)?;
     ratatui::restore();
     Ok(())
 }
