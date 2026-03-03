@@ -3,14 +3,7 @@ use ratatui::{
     widgets::canvas::{Canvas, Rectangle},
 };
 
-pub const DISPLAY_WIDTH: usize = 64;
-pub const DISPLAY_HEIGHT: usize = 32;
-pub const SPRITE_WIDTH: usize = 8;
-pub type AhoyFrame = [u64; DISPLAY_HEIGHT];
-
-pub trait AhoyDisplay {
-    fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()>;
-}
+use super::{AhoyDisplay, AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH, Size};
 
 pub struct RatatuiAhoyDisplay {
     terminal: ratatui::DefaultTerminal,
@@ -25,29 +18,6 @@ impl Default for RatatuiAhoyDisplay {
 impl Drop for RatatuiAhoyDisplay {
     fn drop(&mut self) {
         ratatui::restore();
-    }
-}
-struct Size {
-    width: f64,
-    height: f64,
-}
-impl Size {
-    fn new(width: f64, height: f64) -> Self {
-        Self { width, height }
-    }
-    fn scale(self, factor: f64) -> Self {
-        Self {
-            width: self.width * factor,
-            height: self.height * factor,
-        }
-    }
-}
-impl Default for Size {
-    fn default() -> Self {
-        Self {
-            width: 1.0,
-            height: 1.0,
-        }
     }
 }
 
