@@ -58,4 +58,8 @@ impl AhoyDisplay for RatatuiAhoyDisplay {
         })?;
         Ok(())
     }
+
+    fn connect_new(vtx: std::sync::mpsc::Sender<super::AhoyDisplayEvents>) -> anyhow::Result<()> {
+        todo!()
+    }
 }

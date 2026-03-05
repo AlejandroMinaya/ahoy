@@ -1,13 +1,16 @@
 mod display;
 
-use std::{fs::File, io::BufReader, path::PathBuf, time::Duration};
+use std::sync::mpsc::channel;
+use std::thread;
+use std::{fs::File, io::BufReader, path::PathBuf};
 
 use ahoy::Ahoy;
 use cli_log::init_cli_log;
-use crossterm::event::{self, Event};
-use display::{AhoyDisplay, native_display::NativeDisplay, ratatui_display::RatatuiAhoyDisplay};
+use display::{AhoyDisplay, native_display::NativeDisplay};
 
 use clap::Parser;
+
+use crate::display::AhoyDisplayEvents;
 
 #[derive(Parser)]
 struct Args {
@@ -24,22 +27,18 @@ fn main() -> anyhow::Result<()> {
     let mut ahoy = Ahoy::default();
     ahoy.load(&mut reader)?;
 
-    // let mut display = RatatuiAhoyDisplay::default();
-    let mut display = NativeDisplay::new()?;
-    /* TODO:
-     * You have two competing app loops. The one below this comment with its own key handling,
-     * and the one within the NativeDisplay event_loop. I believe it makes sense to choose only
-     * one or to add to the AhoyDisplay a looping/event-handling situation since for ratatui
-     * it makes sense to use the crossterm events but for wgpu it makes sense to use the
-     * winit events.
-     * */
-    loop {
-        ahoy.process()?;
-        display.draw(&ahoy.current_frame)?;
-        if event::poll(Duration::from_millis(2))? && matches!(event::read()?, Event::Key(_)) {
-            break;
+    let (vtx, vrx) = channel();
+    let _ = NativeDisplay::connect_new(vtx);
+    let processor = thread::spawn(move || {
+        loop {
+            let _ = ahoy.process();
+            if let Ok(event) = vrx.try_recv() {
+                match event {
+                    AhoyDisplayEvents::TurnOff => break,
+                }
+            }
         }
-    }
-    ratatui::restore();
+    });
+    let _ = processor.join();
     Ok(())
 }
