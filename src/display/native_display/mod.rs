@@ -4,7 +4,6 @@ use winit::{
     application::ApplicationHandler,
     event::*,
     event_loop::{ActiveEventLoop, EventLoop},
-    keyboard::{KeyCode, PhysicalKey},
     window::Window,
 };
 
@@ -292,18 +291,6 @@ impl ApplicationHandler<State> for NativeDisplay {
                     }
                 };
             }
-            WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        physical_key: PhysicalKey::Code(code),
-                        state: key_state,
-                        ..
-                    },
-                ..
-            } => match (code, key_state.is_pressed()) {
-                (KeyCode::Space, true) => println!("lol"),
-                (_, _) => event_loop.exit(),
-            },
             _ => (),
         }
     }
