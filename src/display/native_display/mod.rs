@@ -9,7 +9,7 @@ use winit::{
 
 use crate::display::AhoyDisplayEvents;
 
-use super::AhoyDisplay;
+use super::AhoyIO;
 
 pub struct State {
     surface: wgpu::Surface<'static>,
@@ -194,23 +194,25 @@ pub struct NativeIO {
     vtx: Option<Sender<AhoyDisplayEvents>>,
 }
 
-impl AhoyDisplay for NativeIO {
-    fn connect_new(vtx: std::sync::mpsc::Sender<super::AhoyDisplayEvents>) -> anyhow::Result<()> {
+impl AhoyIO for NativeIO {
+    fn connect_new(vtx: std::sync::mpsc::Sender<super::AhoyDisplayEvents>) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
         }
 
-        let event_loop = EventLoop::with_user_event().build()?;
-
-        let mut display = Self {
+        Self {
             state: None,
             vtx: Some(vtx),
-        };
+        }
+    }
 
-        event_loop.run_app(&mut display)?;
+    fn start(&mut self) -> anyhow::Result<()> {
+        let event_loop = EventLoop::with_user_event().build()?;
+        event_loop.run_app(self)?;
         Ok(())
     }
+
     fn draw(&mut self, _frame: &super::AhoyFrame) -> anyhow::Result<()> {
         Ok(())
     }

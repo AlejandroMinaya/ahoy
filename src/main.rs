@@ -6,7 +6,7 @@ use std::{fs::File, io::BufReader, path::PathBuf};
 
 use ahoy::Ahoy;
 use cli_log::init_cli_log;
-use display::{AhoyDisplay, native_display::NativeIO};
+use display::{AhoyIO, native_display::NativeIO};
 
 use clap::Parser;
 
@@ -28,12 +28,10 @@ fn main() -> anyhow::Result<()> {
     ahoy.load(&mut reader)?;
 
     let (vtx, vrx) = channel();
-    /* I believe that maybe the way forward is with an intermediary/adapter that takes care of
-     * receiving the frames from the processor and forwarding that information to the display.
-     * I think it may be worth looking into how video/media buses work. The idea would be to
-     * define really light traits on the sending & receiving ends. It may work, it may not.
-     * We'll see
-     * */
+    /* The new approach is to treat the displays as the IO system. Starting the system an
+     * initializing the screen are now separate methods. We need to create another channel
+     * to send things from the "processor" to the IO system.
+     */
     let _ = NativeIO::connect_new(vtx);
     let processor = thread::spawn(move || {
         loop {

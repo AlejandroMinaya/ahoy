@@ -12,9 +12,10 @@ pub enum AhoyDisplayEvents {
     TurnOff,
 }
 
-pub trait AhoyDisplay {
-    fn connect_new(vtx: Sender<AhoyDisplayEvents>) -> anyhow::Result<()>;
+pub trait AhoyIO {
+    fn connect_new(vtx: Sender<AhoyDisplayEvents>) -> Self;
     fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()>;
+    fn start(&mut self) -> anyhow::Result<()>;
 }
 
 struct Size {
