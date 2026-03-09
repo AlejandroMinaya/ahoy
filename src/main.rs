@@ -6,7 +6,7 @@ use std::{fs::File, io::BufReader, path::PathBuf};
 
 use ahoy::Ahoy;
 use cli_log::init_cli_log;
-use display::{AhoyDisplay, native_display::NativeDisplay};
+use display::{AhoyDisplay, native_display::NativeIO};
 
 use clap::Parser;
 
@@ -34,7 +34,7 @@ fn main() -> anyhow::Result<()> {
      * define really light traits on the sending & receiving ends. It may work, it may not.
      * We'll see
      * */
-    let _ = NativeDisplay::connect_new(vtx);
+    let _ = NativeIO::connect_new(vtx);
     let processor = thread::spawn(move || {
         loop {
             let _ = ahoy.process();

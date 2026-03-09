@@ -189,31 +189,12 @@ impl State {
     }
 }
 
-pub struct NativeDisplay {
+pub struct NativeIO {
     state: Option<State>,
     vtx: Option<Sender<AhoyDisplayEvents>>,
 }
 
-impl NativeDisplay {
-    pub fn new() -> anyhow::Result<Self> {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            env_logger::init();
-        }
-
-        let event_loop = EventLoop::with_user_event().build()?;
-
-        let mut display = Self {
-            state: None,
-            vtx: None,
-        };
-
-        event_loop.run_app(&mut display)?;
-        Ok(display)
-    }
-}
-
-impl AhoyDisplay for NativeDisplay {
+impl AhoyDisplay for NativeIO {
     fn connect_new(vtx: std::sync::mpsc::Sender<super::AhoyDisplayEvents>) -> anyhow::Result<()> {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -235,7 +216,7 @@ impl AhoyDisplay for NativeDisplay {
     }
 }
 
-impl ApplicationHandler<State> for NativeDisplay {
+impl ApplicationHandler<State> for NativeIO {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let window_attributes = Window::default_attributes();
 
