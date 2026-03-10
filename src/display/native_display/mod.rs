@@ -1,16 +1,13 @@
-use std::{
-    sync::{
-        Arc,
-        mpsc::{Receiver, Sender},
-    },
-    thread,
+use std::sync::{
+    Arc,
+    mpsc::{Receiver, Sender},
 };
 
 use winit::{
     application::ApplicationHandler,
     event::*,
     event_loop::{ActiveEventLoop, EventLoop},
-    window::{self, Window},
+    window::Window,
 };
 
 use crate::display::{AhoyDisplayEvents, AhoyFrame};
@@ -25,10 +22,14 @@ pub struct State {
     is_surface_configured: bool,
     render_pipeline: wgpu::RenderPipeline,
     window: Arc<Window>,
+    frame_bus: Receiver<AhoyFrame>,
 }
 
 impl State {
-    pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
+    pub async fn new(
+        window: Arc<Window>,
+        frame_bus: Option<Receiver<AhoyFrame>>,
+    ) -> anyhow::Result<Self> {
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
@@ -133,6 +134,7 @@ impl State {
             queue,
             config,
             window,
+            frame_bus: frame_bus.expect("to find a frame bus"),
             render_pipeline,
             is_surface_configured: false,
         })
@@ -198,7 +200,7 @@ impl State {
 pub struct NativeIO {
     state: Option<State>,
     io_tx: Sender<AhoyDisplayEvents>,
-    processor_rx: Receiver<AhoyFrame>,
+    processor_rx: Option<Receiver<AhoyFrame>>,
 }
 
 impl AhoyIO for NativeIO {
@@ -211,7 +213,7 @@ impl AhoyIO for NativeIO {
         Self {
             state: None,
             io_tx,
-            processor_rx,
+            processor_rx: Some(processor_rx),
         }
     }
     /* The current issue is that you don't know how to relay the frame to the window.
@@ -238,7 +240,8 @@ impl ApplicationHandler<State> for NativeIO {
 
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
         {
-            self.state = Some(pollster::block_on(State::new(window)).unwrap());
+            self.state =
+                Some(pollster::block_on(State::new(window, self.processor_rx.take())).unwrap());
         }
     }
 
