@@ -15,7 +15,7 @@ pub enum AhoyDisplayEvents {
 pub trait AhoyIO {
     fn connect_new(io_tx: Sender<AhoyDisplayEvents>, processor_rx: Receiver<AhoyFrame>) -> Self;
     fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()>;
-    fn start(&mut self, processor_rx: Receiver<AhoyFrame>) -> anyhow::Result<()>;
+    fn start(&mut self) -> anyhow::Result<()>;
 }
 
 struct Size {

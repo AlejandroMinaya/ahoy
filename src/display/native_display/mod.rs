@@ -220,7 +220,7 @@ impl AhoyIO for NativeIO {
      * certain that you need to bind the frame event to WindowEvent::RedrawRequested
      */
 
-    fn start(&mut self, processor_rx: Receiver<AhoyFrame>) -> anyhow::Result<()> {
+    fn start(&mut self) -> anyhow::Result<()> {
         let event_loop = EventLoop::with_user_event().build()?;
         event_loop.run_app(self)?;
 

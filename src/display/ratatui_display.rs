@@ -67,7 +67,7 @@ impl AhoyIO for RatatuiAhoyDisplay {
         todo!()
     }
 
-    fn start(&mut self, processor_rx: Receiver<AhoyFrame>) -> anyhow::Result<()> {
+    fn start(&mut self) -> anyhow::Result<()> {
         todo!()
     }
 }
