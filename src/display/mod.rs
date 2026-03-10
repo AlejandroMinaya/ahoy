@@ -1,4 +1,4 @@
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{Receiver, Sender};
 
 pub mod native_display;
 pub mod ratatui_display;
@@ -13,9 +13,9 @@ pub enum AhoyDisplayEvents {
 }
 
 pub trait AhoyIO {
-    fn connect_new(vtx: Sender<AhoyDisplayEvents>) -> Self;
+    fn connect_new(io_tx: Sender<AhoyDisplayEvents>, processor_rx: Receiver<AhoyFrame>) -> Self;
     fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()>;
-    fn start(&mut self) -> anyhow::Result<()>;
+    fn start(&mut self, processor_rx: Receiver<AhoyFrame>) -> anyhow::Result<()>;
 }
 
 struct Size {

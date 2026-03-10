@@ -1,13 +1,19 @@
-use std::sync::{Arc, mpsc::Sender};
+use std::{
+    sync::{
+        Arc,
+        mpsc::{Receiver, Sender},
+    },
+    thread,
+};
 
 use winit::{
     application::ApplicationHandler,
     event::*,
     event_loop::{ActiveEventLoop, EventLoop},
-    window::Window,
+    window::{self, Window},
 };
 
-use crate::display::AhoyDisplayEvents;
+use crate::display::{AhoyDisplayEvents, AhoyFrame};
 
 use super::AhoyIO;
 
@@ -191,11 +197,12 @@ impl State {
 
 pub struct NativeIO {
     state: Option<State>,
-    vtx: Option<Sender<AhoyDisplayEvents>>,
+    io_tx: Sender<AhoyDisplayEvents>,
+    processor_rx: Receiver<AhoyFrame>,
 }
 
 impl AhoyIO for NativeIO {
-    fn connect_new(vtx: std::sync::mpsc::Sender<super::AhoyDisplayEvents>) -> Self {
+    fn connect_new(io_tx: Sender<AhoyDisplayEvents>, processor_rx: Receiver<AhoyFrame>) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
@@ -203,13 +210,20 @@ impl AhoyIO for NativeIO {
 
         Self {
             state: None,
-            vtx: Some(vtx),
+            io_tx,
+            processor_rx,
         }
     }
+    /* The current issue is that you don't know how to relay the frame to the window.
+     * You know that the window can be shared across threads, but you don't know when
+     * it is the best moment to do so. The channel is already created and you're mostly
+     * certain that you need to bind the frame event to WindowEvent::RedrawRequested
+     */
 
-    fn start(&mut self) -> anyhow::Result<()> {
+    fn start(&mut self, processor_rx: Receiver<AhoyFrame>) -> anyhow::Result<()> {
         let event_loop = EventLoop::with_user_event().build()?;
         event_loop.run_app(self)?;
+
         Ok(())
     }
 
@@ -223,11 +237,7 @@ impl ApplicationHandler<State> for NativeIO {
         let window_attributes = Window::default_attributes();
 
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
-
-        #[cfg(not(target_arch = "wasm32"))]
         {
-            // If we are not on web we can use pollster to
-            // await the
             self.state = Some(pollster::block_on(State::new(window)).unwrap());
         }
     }
@@ -237,13 +247,7 @@ impl ApplicationHandler<State> for NativeIO {
     }
 
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
-        if self
-            .vtx
-            .as_ref()
-            .expect("Sender to exist")
-            .send(AhoyDisplayEvents::TurnOff)
-            .is_err()
-        {
+        if self.io_tx.send(AhoyDisplayEvents::TurnOff).is_err() {
             panic!("oh oh")
         }
     }

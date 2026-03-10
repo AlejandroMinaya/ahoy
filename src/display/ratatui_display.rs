@@ -1,7 +1,11 @@
+use std::sync::mpsc::{Receiver, Sender};
+
 use ratatui::{
     style::Color,
     widgets::canvas::{Canvas, Rectangle},
 };
+
+use crate::display::AhoyDisplayEvents;
 
 use super::{AhoyFrame, AhoyIO, DISPLAY_HEIGHT, DISPLAY_WIDTH, Size};
 
@@ -59,11 +63,11 @@ impl AhoyIO for RatatuiAhoyDisplay {
         Ok(())
     }
 
-    fn connect_new(vtx: std::sync::mpsc::Sender<super::AhoyDisplayEvents>) -> Self {
+    fn connect_new(io_tx: Sender<AhoyDisplayEvents>, processor_rx: Receiver<AhoyFrame>) -> Self {
         todo!()
     }
 
-    fn start(&mut self) -> anyhow::Result<()> {
+    fn start(&mut self, processor_rx: Receiver<AhoyFrame>) -> anyhow::Result<()> {
         todo!()
     }
 }
