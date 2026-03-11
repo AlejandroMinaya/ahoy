@@ -220,8 +220,6 @@ impl AhoyIO for NativeIO {
         let proxy = event_loop.create_proxy();
         let output_rx = self.output_rx.take();
 
-        event_loop.run_app(self)?;
-
         let output_events = thread::spawn(move || {
             if let Some(output_rx) = output_rx {
                 loop {
@@ -231,6 +229,8 @@ impl AhoyIO for NativeIO {
                 }
             }
         });
+
+        event_loop.run_app(self)?;
 
         let _ = output_events.join();
         Ok(())
@@ -254,7 +254,10 @@ impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
     fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: AhoyOutputEvent) {
         if let Some(state) = &mut self.state {
             match event {
-                AhoyOutputEvent::NewFrame(frame) => state.current_frame = Some(frame),
+                AhoyOutputEvent::NewFrame(frame) => {
+                    state.current_frame = Some(frame);
+                    print!("{frame:?}");
+                }
             }
         }
     }
