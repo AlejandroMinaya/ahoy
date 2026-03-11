@@ -63,7 +63,7 @@ impl AhoyIO for RatatuiAhoyDisplay {
         Ok(())
     }
 
-    fn connect_new(io_tx: Sender<AhoyInputEvent>, processor_rx: Receiver<AhoyOutputEvent>) -> Self {
+    fn connect_new(input_tx: Sender<AhoyInputEvent>, output_rx: Receiver<AhoyOutputEvent>) -> Self {
         todo!()
     }
 

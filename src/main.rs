@@ -27,25 +27,21 @@ fn main() -> anyhow::Result<()> {
     let mut ahoy = Ahoy::default();
     ahoy.load(&mut reader)?;
 
-    /* The new approach is to treat the displays as the IO system. Starting the system an
-     * initializing the screen are now separate methods. We need to create another channel
-     * to send things from the "processor" to the IO system.
-     */
-    let (io_tx, io_rx) = channel();
-    let (processor_tx, processor_rx) = channel();
+    let (input_tx, input_rx) = channel();
+    let (output_tx, output_rx) = channel();
 
-    let mut ahoyio = NativeIO::connect_new(io_tx, processor_rx);
+    let mut ahoyio = NativeIO::connect_new(input_tx, output_rx);
     let _ = ahoyio.start();
 
     let processor = thread::spawn(move || {
         loop {
             let _ = ahoy.process();
-            if let Ok(event) = io_rx.try_recv() {
+            if let Ok(event) = input_rx.try_recv() {
                 match event {
                     AhoyInputEvent::TurnOff => break,
                 }
             }
-            processor_tx
+            output_tx
                 .send(AhoyOutputEvent::NewFrame(ahoy.current_frame))
                 .expect("Frame to be sent");
         }

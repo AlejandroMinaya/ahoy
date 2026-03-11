@@ -147,8 +147,6 @@ impl State {
         self.is_surface_configured = true;
     }
 
-    pub fn update(&mut self) {}
-
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         self.window.request_redraw();
 
@@ -196,12 +194,12 @@ impl State {
 
 pub struct NativeIO {
     state: Option<State>,
-    io_tx: Sender<AhoyInputEvent>,
-    processor_rx: Receiver<AhoyOutputEvent>,
+    input_tx: Sender<AhoyInputEvent>,
+    output_rx: Receiver<AhoyOutputEvent>,
 }
 
 impl AhoyIO for NativeIO {
-    fn connect_new(io_tx: Sender<AhoyInputEvent>, processor_rx: Receiver<AhoyOutputEvent>) -> Self {
+    fn connect_new(input_tx: Sender<AhoyInputEvent>, output_rx: Receiver<AhoyOutputEvent>) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
@@ -209,8 +207,8 @@ impl AhoyIO for NativeIO {
 
         Self {
             state: None,
-            io_tx,
-            processor_rx,
+            input_tx,
+            output_rx,
         }
     }
     /* The current issue is that you don't know how to relay the frame to the window.
@@ -250,7 +248,7 @@ impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
     }
 
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
-        if self.io_tx.send(AhoyInputEvent::TurnOff).is_err() {
+        if self.input_tx.send(AhoyInputEvent::TurnOff).is_err() {
             panic!("oh oh")
         }
     }
@@ -270,7 +268,6 @@ impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => state.resize(size.width, size.height),
             WindowEvent::RedrawRequested => {
-                state.update();
                 match state.render() {
                     Ok(_) => {}
                     Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
