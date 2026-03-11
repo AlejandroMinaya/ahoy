@@ -1,6 +1,9 @@
-use std::sync::{
-    Arc,
-    mpsc::{Receiver, Sender},
+use std::{
+    sync::{
+        Arc,
+        mpsc::{Receiver, Sender},
+    },
+    thread,
 };
 
 use winit::{
@@ -195,7 +198,7 @@ impl State {
 pub struct NativeIO {
     state: Option<State>,
     input_tx: Sender<AhoyInputEvent>,
-    output_rx: Receiver<AhoyOutputEvent>,
+    output_rx: Option<Receiver<AhoyOutputEvent>>,
 }
 
 impl AhoyIO for NativeIO {
@@ -208,19 +211,28 @@ impl AhoyIO for NativeIO {
         Self {
             state: None,
             input_tx,
-            output_rx,
+            output_rx: Some(output_rx),
         }
     }
-    /* The current issue is that you don't know how to relay the frame to the window.
-     * You know that the window can be shared across threads, but you don't know when
-     * it is the best moment to do so. The channel is already created and you're mostly
-     * certain that you need to bind the frame event to WindowEvent::RedrawRequested
-     */
 
     fn start(&mut self) -> anyhow::Result<()> {
         let event_loop = EventLoop::with_user_event().build()?;
+        let proxy = event_loop.create_proxy();
+        let output_rx = self.output_rx.take();
+
         event_loop.run_app(self)?;
 
+        let output_events = thread::spawn(move || {
+            if let Some(output_rx) = output_rx {
+                loop {
+                    if let Ok(event) = output_rx.recv() {
+                        let _ = proxy.send_event(event);
+                    }
+                }
+            }
+        });
+
+        let _ = output_events.join();
         Ok(())
     }
 
