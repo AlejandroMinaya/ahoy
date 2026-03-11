@@ -1,19 +1,16 @@
-use std::{
-    sync::{
-        Arc,
-        mpsc::{Receiver, Sender},
-    },
-    thread,
+use std::sync::{
+    Arc,
+    mpsc::{Receiver, Sender},
 };
 
 use winit::{
     application::ApplicationHandler,
     event::*,
     event_loop::{ActiveEventLoop, EventLoop},
-    window::{self, Window},
+    window::Window,
 };
 
-use crate::display::{AhoyFrame, AhoyInputEvent};
+use crate::display::{AhoyFrame, AhoyInputEvent, AhoyOutputEvent};
 
 use super::AhoyIO;
 
@@ -25,6 +22,7 @@ pub struct State {
     is_surface_configured: bool,
     render_pipeline: wgpu::RenderPipeline,
     window: Arc<Window>,
+    current_frame: Option<AhoyFrame>,
 }
 
 impl State {
@@ -135,6 +133,7 @@ impl State {
             window,
             render_pipeline,
             is_surface_configured: false,
+            current_frame: None,
         })
     }
 
@@ -198,11 +197,11 @@ impl State {
 pub struct NativeIO {
     state: Option<State>,
     io_tx: Sender<AhoyInputEvent>,
-    processor_rx: Receiver<AhoyFrame>,
+    processor_rx: Receiver<AhoyOutputEvent>,
 }
 
 impl AhoyIO for NativeIO {
-    fn connect_new(io_tx: Sender<AhoyInputEvent>, processor_rx: Receiver<AhoyFrame>) -> Self {
+    fn connect_new(io_tx: Sender<AhoyInputEvent>, processor_rx: Receiver<AhoyOutputEvent>) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
@@ -232,7 +231,7 @@ impl AhoyIO for NativeIO {
     }
 }
 
-impl ApplicationHandler<i32> for NativeIO {
+impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let window_attributes = Window::default_attributes();
 
@@ -242,7 +241,13 @@ impl ApplicationHandler<i32> for NativeIO {
         }
     }
 
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: i32) {}
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: AhoyOutputEvent) {
+        if let Some(state) = &mut self.state {
+            match event {
+                AhoyOutputEvent::NewFrame(frame) => state.current_frame = Some(frame),
+            }
+        }
+    }
 
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
         if self.io_tx.send(AhoyInputEvent::TurnOff).is_err() {

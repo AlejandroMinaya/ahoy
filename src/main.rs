@@ -10,7 +10,7 @@ use display::{AhoyIO, native_display::NativeIO};
 
 use clap::Parser;
 
-use crate::display::AhoyInputEvent;
+use crate::display::{AhoyInputEvent, AhoyOutputEvent};
 
 #[derive(Parser)]
 struct Args {
@@ -46,7 +46,7 @@ fn main() -> anyhow::Result<()> {
                 }
             }
             processor_tx
-                .send(ahoy.current_frame)
+                .send(AhoyOutputEvent::NewFrame(ahoy.current_frame))
                 .expect("Frame to be sent");
         }
     });
