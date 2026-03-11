@@ -8,12 +8,12 @@ pub const DISPLAY_HEIGHT: usize = 32;
 pub const SPRITE_WIDTH: usize = 8;
 pub type AhoyFrame = [u64; DISPLAY_HEIGHT];
 
-pub enum AhoyDisplayEvents {
+pub enum AhoyInputEvent {
     TurnOff,
 }
 
 pub trait AhoyIO {
-    fn connect_new(io_tx: Sender<AhoyDisplayEvents>, processor_rx: Receiver<AhoyFrame>) -> Self;
+    fn connect_new(io_tx: Sender<AhoyInputEvent>, processor_rx: Receiver<AhoyFrame>) -> Self;
     fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()>;
     fn start(&mut self) -> anyhow::Result<()>;
 }

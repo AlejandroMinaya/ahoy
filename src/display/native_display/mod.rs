@@ -13,7 +13,7 @@ use winit::{
     window::{self, Window},
 };
 
-use crate::display::{AhoyDisplayEvents, AhoyFrame};
+use crate::display::{AhoyFrame, AhoyInputEvent};
 
 use super::AhoyIO;
 
@@ -197,12 +197,12 @@ impl State {
 
 pub struct NativeIO {
     state: Option<State>,
-    io_tx: Sender<AhoyDisplayEvents>,
+    io_tx: Sender<AhoyInputEvent>,
     processor_rx: Receiver<AhoyFrame>,
 }
 
 impl AhoyIO for NativeIO {
-    fn connect_new(io_tx: Sender<AhoyDisplayEvents>, processor_rx: Receiver<AhoyFrame>) -> Self {
+    fn connect_new(io_tx: Sender<AhoyInputEvent>, processor_rx: Receiver<AhoyFrame>) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
@@ -232,7 +232,7 @@ impl AhoyIO for NativeIO {
     }
 }
 
-impl ApplicationHandler<State> for NativeIO {
+impl ApplicationHandler<i32> for NativeIO {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let window_attributes = Window::default_attributes();
 
@@ -242,12 +242,10 @@ impl ApplicationHandler<State> for NativeIO {
         }
     }
 
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: State) {
-        self.state = Some(event);
-    }
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: i32) {}
 
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
-        if self.io_tx.send(AhoyDisplayEvents::TurnOff).is_err() {
+        if self.io_tx.send(AhoyInputEvent::TurnOff).is_err() {
             panic!("oh oh")
         }
     }

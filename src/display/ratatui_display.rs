@@ -5,7 +5,7 @@ use ratatui::{
     widgets::canvas::{Canvas, Rectangle},
 };
 
-use crate::display::AhoyDisplayEvents;
+use crate::display::AhoyInputEvent;
 
 use super::{AhoyFrame, AhoyIO, DISPLAY_HEIGHT, DISPLAY_WIDTH, Size};
 
@@ -63,7 +63,7 @@ impl AhoyIO for RatatuiAhoyDisplay {
         Ok(())
     }
 
-    fn connect_new(io_tx: Sender<AhoyDisplayEvents>, processor_rx: Receiver<AhoyFrame>) -> Self {
+    fn connect_new(io_tx: Sender<AhoyInputEvent>, processor_rx: Receiver<AhoyFrame>) -> Self {
         todo!()
     }
 

@@ -10,7 +10,7 @@ use display::{AhoyIO, native_display::NativeIO};
 
 use clap::Parser;
 
-use crate::display::AhoyDisplayEvents;
+use crate::display::AhoyInputEvent;
 
 #[derive(Parser)]
 struct Args {
@@ -42,7 +42,7 @@ fn main() -> anyhow::Result<()> {
             let _ = ahoy.process();
             if let Ok(event) = io_rx.try_recv() {
                 match event {
-                    AhoyDisplayEvents::TurnOff => break,
+                    AhoyInputEvent::TurnOff => break,
                 }
             }
             processor_tx
