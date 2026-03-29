@@ -199,7 +199,7 @@ impl State {
 pub struct NativeIO {
     state: Option<State>,
     input_tx: Sender<AhoyInputEvent>,
-    output_rx: Option<Receiver<AhoyOutputEvent>>,
+    output_rx: Receiver<AhoyOutputEvent>,
 }
 
 impl AhoyIO for NativeIO {
@@ -212,7 +212,7 @@ impl AhoyIO for NativeIO {
         Self {
             state: None,
             input_tx,
-            output_rx: Some(output_rx),
+            output_rx,
         }
     }
 
@@ -266,6 +266,10 @@ impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
             Some(canvas) => canvas,
             None => return,
         };
+
+        if let Ok(frame) = self.output_rx.try_recv() {
+            println!("Frame: {:?}", frame)
+        }
 
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
