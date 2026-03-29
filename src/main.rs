@@ -5,11 +5,9 @@ use std::thread;
 use std::{fs::File, io::BufReader, path::PathBuf};
 
 use ahoy::Ahoy;
-use cli_log::init_cli_log;
 use display::{AhoyIO, native_display::NativeIO};
 
 use clap::Parser;
-use log::debug;
 
 use crate::display::{AhoyInputEvent, AhoyOutputEvent};
 
@@ -27,7 +25,6 @@ fn main() -> anyhow::Result<()> {
     let (output_tx, output_rx) = channel();
 
     let mut ahoyio = NativeIO::connect_new(input_tx, output_rx);
-    let _ = ahoyio.start();
 
     let mut ahoy = Ahoy::default();
     ahoy.load(&mut reader)?;
@@ -45,6 +42,8 @@ fn main() -> anyhow::Result<()> {
                 .expect("Frame to be sent");
         }
     });
+    let _ = ahoyio.start();
+
     let _ = processor.join();
     Ok(())
 }
