@@ -9,6 +9,7 @@ use cli_log::init_cli_log;
 use display::{AhoyIO, native_display::NativeIO};
 
 use clap::Parser;
+use log::debug;
 
 use crate::display::{AhoyInputEvent, AhoyOutputEvent};
 
@@ -18,20 +19,18 @@ struct Args {
     program: PathBuf,
 }
 fn main() -> anyhow::Result<()> {
-    init_cli_log!();
-
     let args = Args::parse();
     let file = File::open(args.program)?;
     let mut reader = BufReader::new(file);
-
-    let mut ahoy = Ahoy::default();
-    ahoy.load(&mut reader)?;
 
     let (input_tx, input_rx) = channel();
     let (output_tx, output_rx) = channel();
 
     let mut ahoyio = NativeIO::connect_new(input_tx, output_rx);
     let _ = ahoyio.start();
+
+    let mut ahoy = Ahoy::default();
+    ahoy.load(&mut reader)?;
 
     let processor = thread::spawn(move || {
         loop {

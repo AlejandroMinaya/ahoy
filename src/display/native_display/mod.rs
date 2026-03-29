@@ -6,6 +6,7 @@ use std::{
     thread,
 };
 
+use log::info;
 use winit::{
     application::ApplicationHandler,
     event::*,
@@ -217,22 +218,9 @@ impl AhoyIO for NativeIO {
 
     fn start(&mut self) -> anyhow::Result<()> {
         let event_loop = EventLoop::with_user_event().build()?;
-        let proxy = event_loop.create_proxy();
-        let output_rx = self.output_rx.take();
-
-        let output_events = thread::spawn(move || {
-            if let Some(output_rx) = output_rx {
-                loop {
-                    if let Ok(event) = output_rx.recv() {
-                        let _ = proxy.send_event(event);
-                    }
-                }
-            }
-        });
 
         event_loop.run_app(self)?;
 
-        let _ = output_events.join();
         Ok(())
     }
 
