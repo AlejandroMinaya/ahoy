@@ -1,12 +1,9 @@
-use std::{
-    sync::{
-        Arc,
-        mpsc::{Receiver, Sender},
-    },
-    thread,
+use std::sync::{
+    Arc,
+    mpsc::{Receiver, Sender},
 };
 
-use log::info;
+use wgpu::VertexAttribute;
 use winit::{
     application::ApplicationHandler,
     event::*,
@@ -97,7 +94,18 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[],
+                /* TODO: CONTINUE HERE AND USE
+                 * https://webgpufundamentals.org/webgpu/lessons/webgpu-points.html AS REFERENCE
+                 */
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: (32) * 64,
+                    step_mode: wgpu::VertexStepMode::Instance,
+                    attributes: &[wgpu::VertexAttribute {
+                        format: todo!(),
+                        offset: 0,
+                        shader_location: 0,
+                    }],
+                }],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -194,6 +202,49 @@ impl State {
 
         Ok(())
     }
+    pub fn draw_frame(&mut self, frame: AhoyFrame) -> Result<(), wgpu::SurfaceError> {
+        self.window.request_redraw();
+
+        if !self.is_surface_configured {
+            return Ok(());
+        }
+
+        let output = self.surface.get_current_texture()?;
+        let view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                        store: wgpu::StoreOp::Store,
+                    },
+                    depth_slice: None,
+                })],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+            });
+
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.draw(frame);
+        }
+        // submit will accept anything that implements IntoIter
+        self.queue.submit(std::iter::once(encoder.finish()));
+        output.present();
+
+        Ok(())
+    }
 }
 
 pub struct NativeIO {
@@ -267,8 +318,13 @@ impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
             None => return,
         };
 
-        if let Ok(frame) = self.output_rx.try_recv() {
-            println!("Frame: {:?}", frame)
+        if let Ok(event) = self.output_rx.try_recv() {
+            match event {
+                AhoyOutputEvent::NewFrame(frame) => {
+                    println!("Frame: {:?}", frame);
+                    let _ = state.draw_frame(frame);
+                }
+            }
         }
 
         match event {
