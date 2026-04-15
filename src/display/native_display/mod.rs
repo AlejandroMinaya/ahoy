@@ -1,6 +1,9 @@
-use std::sync::{
-    Arc,
-    mpsc::{Receiver, Sender},
+use std::{
+    sync::{
+        Arc,
+        mpsc::{Receiver, Sender},
+    },
+    vec,
 };
 
 use wgpu::VertexAttribute;
@@ -11,7 +14,7 @@ use winit::{
     window::Window,
 };
 
-use crate::display::{AhoyFrame, AhoyInputEvent, AhoyOutputEvent};
+use crate::display::{AhoyFrame, AhoyInputEvent, AhoyOutputEvent, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 
 use super::AhoyIO;
 
@@ -26,6 +29,20 @@ pub struct State {
     current_frame: Option<AhoyFrame>,
 }
 
+type Vertex2D = [u8; 2];
+
+fn to_vertices(frame: &AhoyFrame) -> Vec<Vertex2D> {
+    let mut vertices: Vec<Vertex2D> = vec![];
+    for row in 0_usize..DISPLAY_HEIGHT {
+        for col in DISPLAY_WIDTH..0_usize {
+            let x: u8 = (frame[row] >> col) as u8;
+            let y: u8 = row as u8;
+            vertices.push([x, y]);
+        }
+    }
+
+    return vertices;
+}
 impl State {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
         let size = window.inner_size();
@@ -237,7 +254,7 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw(frame);
+            render_pass.draw(0..3, 0..1)
         }
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
