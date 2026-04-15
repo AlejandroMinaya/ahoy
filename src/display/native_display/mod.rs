@@ -6,7 +6,7 @@ use std::{
     vec,
 };
 
-use wgpu::VertexAttribute;
+use wgpu::{BufferDescriptor, BufferUsages, VertexAttribute};
 use winit::{
     application::ApplicationHandler,
     event::*,
@@ -29,20 +29,20 @@ pub struct State {
     current_frame: Option<AhoyFrame>,
 }
 
-type Vertex2D = [u8; 2];
-
-fn to_vertices(frame: &AhoyFrame) -> Vec<Vertex2D> {
-    let mut vertices: Vec<Vertex2D> = vec![];
-    for row in 0_usize..DISPLAY_HEIGHT {
-        for col in DISPLAY_WIDTH..0_usize {
-            let x: u8 = (frame[row] >> col) as u8;
-            let y: u8 = row as u8;
-            vertices.push([x, y]);
+fn to_vertices(frame: &AhoyFrame) -> Vec<u8> {
+    let mut vertices: Vec<u8> = vec![];
+    for (idx, row) in frame.iter().enumerate() {
+        for col in 0_usize..DISPLAY_WIDTH {
+            let x: u8 = (row << (DISPLAY_WIDTH - col)) as u8;
+            let y: u8 = idx as u8;
+            vertices.push(x);
+            vertices.push(y);
         }
     }
 
-    return vertices;
+    vertices
 }
+
 impl State {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
         let size = window.inner_size();
@@ -220,8 +220,6 @@ impl State {
         Ok(())
     }
     pub fn draw_frame(&mut self, frame: AhoyFrame) -> Result<(), wgpu::SurfaceError> {
-        self.window.request_redraw();
-
         if !self.is_surface_configured {
             return Ok(());
         }
@@ -233,12 +231,20 @@ impl State {
 
         let mut encoder = self
             .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Render Encoder"),
-            });
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+        let vertex_buffer = self.device.create_buffer(&BufferDescriptor {
+            label: None,
+            size: (DISPLAY_HEIGHT * DISPLAY_WIDTH * size_of::<u8>() * 2) as u64,
+            usage: BufferUsages::VERTEX,
+            mapped_at_creation: false,
+        });
+        self.queue
+            .write_buffer(&vertex_buffer, 0, &to_vertices(&frame));
+
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
+                label: None,
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     resolve_target: None,
