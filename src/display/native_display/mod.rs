@@ -31,20 +31,22 @@ pub struct State {
     current_frame: Option<AhoyFrame>,
 }
 
-type Pixels = [u8; PIXEL_COUNT];
+const VERTEX_BUFFER_LEN: usize = PIXEL_COUNT * 4;
+type Pixels = [u8; VERTEX_BUFFER_LEN];
 
 fn to_vertices(frame: &AhoyFrame) -> Pixels {
-    let mut pixels: Pixels = [0; PIXEL_COUNT];
+    let mut pixels: Pixels = [0; VERTEX_BUFFER_LEN];
     let mut pixel_idx = 0;
     for (idx, row) in frame.iter().enumerate() {
         for col in 0_usize..DISPLAY_WIDTH {
             let x = col as u8;
             let y = idx as u8;
-            let enabled = (row << (DISPLAY_WIDTH - col)) as u8;
+            let enabled = ((row >> col) & 1) as u8;
             pixels[pixel_idx] = x;
             pixels[pixel_idx + 1] = y;
             pixels[pixel_idx + 2] = enabled;
-            pixel_idx += 3;
+            pixels[pixel_idx + 3] = 0;
+            pixel_idx += 4;
         }
     }
 
@@ -114,24 +116,34 @@ impl State {
             });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
+            label: Some("Pixel Grid Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs"),
                 buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: (2 * size_of::<f32>()) as u64,
+                    array_stride: 4,
                     step_mode: wgpu::VertexStepMode::Instance,
                     attributes: &[
                         VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
+                            format: wgpu::VertexFormat::Uint8,
                             offset: 0,
                             shader_location: 0,
                         },
                         VertexAttribute {
-                            format: VertexFormat::Float32,
-                            offset: (size_of::<f32>() * 2) as u64,
+                            format: wgpu::VertexFormat::Uint8,
+                            offset: 1,
                             shader_location: 1,
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Uint8,
+                            offset: 2,
+                            shader_location: 2,
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Uint8,
+                            offset: 3,
+                            shader_location: 4,
                         },
                     ],
                 }],
@@ -245,14 +257,14 @@ impl State {
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
+        let vertices = to_vertices(&frame);
         let vertex_buffer = self.device.create_buffer(&BufferDescriptor {
             label: None,
-            size: (DISPLAY_HEIGHT * DISPLAY_WIDTH * size_of::<f32>() * 3) as u64,
-            usage: BufferUsages::VERTEX,
+            size: VERTEX_BUFFER_LEN as u64,
+            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.queue
-            .write_buffer(&vertex_buffer, 0, &to_vertices(&frame));
+        self.queue.write_buffer(&vertex_buffer, 0, &vertices);
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -272,6 +284,7 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
             render_pass.draw(0..3, 0..1)
         }
         // submit will accept anything that implements IntoIter
