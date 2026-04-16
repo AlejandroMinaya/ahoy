@@ -96,7 +96,7 @@ impl State {
             desired_maximum_frame_latency: 2,
         };
 
-        let shader = device.create_shader_module(wgpu::include_wgsl!("shaders/shader.wgsl"));
+        let shader = device.create_shader_module(wgpu::include_wgsl!("shaders/pixel_grid.wgsl"));
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -110,15 +110,12 @@ impl State {
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: Some("vs_main"),
-                /* TODO: CONTINUE HERE AND USE
-                 * https://webgpufundamentals.org/webgpu/lessons/webgpu-points.html AS REFERENCE
-                 */
+                entry_point: Some("vs"),
                 buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: (32) * 64,
+                    array_stride: (2 * size_of::<u8>()) as u64,
                     step_mode: wgpu::VertexStepMode::Instance,
                     attributes: &[wgpu::VertexAttribute {
-                        format: todo!(),
+                        format: wgpu::VertexFormat::Uint8x2,
                         offset: 0,
                         shader_location: 0,
                     }],
@@ -127,7 +124,7 @@ impl State {
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: Some("fs_main"),
+                entry_point: Some("fs"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: config.format,
                     blend: Some(wgpu::BlendState::REPLACE),
