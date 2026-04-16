@@ -244,7 +244,7 @@ impl State {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-            render_pass.draw(0..(PIXEL_COUNT as u32), 0..1);
+            render_pass.draw(0..6, 0..(PIXEL_COUNT as u32));
         }
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -336,11 +336,12 @@ impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
                             match state.draw_frame(frame) {
                                 Ok(_) => {}
                                 Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                                    print!("Surface Error");
                                     let size = state.window.inner_size();
                                     state.resize(size.width, size.height);
                                 }
                                 Err(e) => {
-                                    log::error!("Unable to render {}", e);
+                                    print!("Unable to render {}", e);
                                 }
                             };
                         }

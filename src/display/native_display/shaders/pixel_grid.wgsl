@@ -9,7 +9,7 @@ struct VSOutput {
     @location(0) enabled: u32
 }
 
-const size = 1;
+const size = 10;
 const quad = array(
     vec2f(-1., -1.),
     vec2f(1., -1.),

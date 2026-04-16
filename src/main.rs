@@ -1,7 +1,8 @@
 mod display;
 
 use std::sync::mpsc::channel;
-use std::thread;
+use std::thread::{self, sleep};
+use std::time::Duration;
 use std::{fs::File, io::BufReader, path::PathBuf};
 
 use ahoy::Ahoy;
@@ -40,6 +41,8 @@ fn main() -> anyhow::Result<()> {
             output_tx
                 .send(AhoyOutputEvent::NewFrame(ahoy.current_frame))
                 .expect("Frame to be sent");
+
+            sleep(Duration::from_millis(200));
         }
     });
     let _ = ahoyio.start();
