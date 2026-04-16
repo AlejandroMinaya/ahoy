@@ -162,8 +162,8 @@ impl State {
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
+                front_face: wgpu::FrontFace::Cw,
+                cull_mode: None,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 unclipped_depth: false,
                 conservative: false,
@@ -223,8 +223,8 @@ impl State {
             usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.queue.write_buffer(&vertex_buffer, 0, &vertices);
 
+        self.queue.write_buffer(&vertex_buffer, 0, &vertices);
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
@@ -332,7 +332,7 @@ impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
                 if let Ok(event) = self.output_rx.try_recv() {
                     match event {
                         AhoyOutputEvent::NewFrame(frame) => {
-                            println!("Frame: {:?}", frame);
+                            // println!("Frame: {:?}", frame);
                             match state.draw_frame(frame) {
                                 Ok(_) => {}
                                 Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {

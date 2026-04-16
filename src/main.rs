@@ -42,7 +42,7 @@ fn main() -> anyhow::Result<()> {
                 .send(AhoyOutputEvent::NewFrame(ahoy.current_frame))
                 .expect("Frame to be sent");
 
-            sleep(Duration::from_millis(200));
+            sleep(Duration::from_millis(16));
         }
     });
     let _ = ahoyio.start();

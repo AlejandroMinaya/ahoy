@@ -25,7 +25,7 @@ const quad = array(
 ) -> VSOutput {
     var vs_output: VSOutput;
     let position = vec2f(f32(v.x), f32(v.y));
-    vs_output.position = vec4f(position + quad[v_idx] * size, 0, 1);
+    vs_output.position = vec4f(position * size, 0, 1);
     vs_output.enabled = v.enabled;
     return vs_output;
 }
@@ -34,5 +34,5 @@ const quad = array(
     if vs_output.enabled > 0 {
         return vec4f(0.639216, 0.305882, 0, 1);
     }
-    return vec4f(0);
+    return vec4f(1);
 }
