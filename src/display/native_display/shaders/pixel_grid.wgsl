@@ -1,5 +1,6 @@
 struct Vertex {
-    @location(0) position: vec2u,
+    @location(0) position: vec2f,
+    @location(1) enabled: f32,
 };
 
 struct VSOutput {
@@ -23,6 +24,7 @@ const quad = array(
 ) -> VSOutput {
     var vs_output: VSOutput;
     vs_output.position = vec4f(v.position + quad[v_idx] * size, 0, 1);
+    vs_output.enabled = v.enabled > 0.0;
     return vs_output;
 }
 

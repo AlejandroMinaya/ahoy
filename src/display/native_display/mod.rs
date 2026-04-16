@@ -6,7 +6,7 @@ use std::{
     vec,
 };
 
-use wgpu::{BufferDescriptor, BufferUsages, VertexAttribute};
+use wgpu::{BufferDescriptor, BufferUsages, VertexAttribute, VertexFormat};
 use winit::{
     application::ApplicationHandler,
     event::*,
@@ -14,7 +14,9 @@ use winit::{
     window::Window,
 };
 
-use crate::display::{AhoyFrame, AhoyInputEvent, AhoyOutputEvent, DISPLAY_HEIGHT, DISPLAY_WIDTH};
+use crate::display::{
+    AhoyFrame, AhoyInputEvent, AhoyOutputEvent, DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_COUNT,
+};
 
 use super::AhoyIO;
 
@@ -29,18 +31,24 @@ pub struct State {
     current_frame: Option<AhoyFrame>,
 }
 
-fn to_vertices(frame: &AhoyFrame) -> Vec<u8> {
-    let mut vertices: Vec<u8> = vec![];
+type Pixels = [u8; PIXEL_COUNT];
+
+fn to_vertices(frame: &AhoyFrame) -> Pixels {
+    let mut pixels: Pixels = [0; PIXEL_COUNT];
+    let mut pixel_idx = 0;
     for (idx, row) in frame.iter().enumerate() {
         for col in 0_usize..DISPLAY_WIDTH {
-            let x: u8 = (row << (DISPLAY_WIDTH - col)) as u8;
-            let y: u8 = idx as u8;
-            vertices.push(x);
-            vertices.push(y);
+            let x = col as u8;
+            let y = idx as u8;
+            let enabled = (row << (DISPLAY_WIDTH - col)) as u8;
+            pixels[pixel_idx] = x;
+            pixels[pixel_idx + 1] = y;
+            pixels[pixel_idx + 2] = enabled;
+            pixel_idx += 3;
         }
     }
 
-    vertices
+    pixels
 }
 
 impl State {
@@ -112,13 +120,20 @@ impl State {
                 module: &shader,
                 entry_point: Some("vs"),
                 buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: (2 * size_of::<u8>()) as u64,
+                    array_stride: (2 * size_of::<f32>()) as u64,
                     step_mode: wgpu::VertexStepMode::Instance,
-                    attributes: &[wgpu::VertexAttribute {
-                        format: wgpu::VertexFormat::Uint8x2,
-                        offset: 0,
-                        shader_location: 0,
-                    }],
+                    attributes: &[
+                        VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Float32,
+                            offset: (size_of::<f32>() * 2) as u64,
+                            shader_location: 1,
+                        },
+                    ],
                 }],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
@@ -232,7 +247,7 @@ impl State {
 
         let vertex_buffer = self.device.create_buffer(&BufferDescriptor {
             label: None,
-            size: (DISPLAY_HEIGHT * DISPLAY_WIDTH * size_of::<u8>() * 2) as u64,
+            size: (DISPLAY_HEIGHT * DISPLAY_WIDTH * size_of::<f32>() * 3) as u64,
             usage: BufferUsages::VERTEX,
             mapped_at_creation: false,
         });

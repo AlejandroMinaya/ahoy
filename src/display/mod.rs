@@ -5,6 +5,7 @@ pub mod ratatui_display;
 
 pub const DISPLAY_WIDTH: usize = 64;
 pub const DISPLAY_HEIGHT: usize = 32;
+pub const PIXEL_COUNT: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT;
 pub const SPRITE_WIDTH: usize = 8;
 pub type AhoyFrame = [u64; DISPLAY_HEIGHT];
 
