@@ -200,50 +200,9 @@ impl State {
         self.is_surface_configured = true;
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn draw_frame(&mut self, frame: AhoyFrame) -> Result<(), wgpu::SurfaceError> {
         self.window.request_redraw();
 
-        if !self.is_surface_configured {
-            return Ok(());
-        }
-
-        let output = self.surface.get_current_texture()?;
-        let view = output
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Render Encoder"),
-            });
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                        store: wgpu::StoreOp::Store,
-                    },
-                    depth_slice: None,
-                })],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-            });
-
-            render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw(0..3, 0..1);
-        }
-        // submit will accept anything that implements IntoIter
-        self.queue.submit(std::iter::once(encoder.finish()));
-        output.present();
-
-        Ok(())
-    }
-    pub fn draw_frame(&mut self, frame: AhoyFrame) -> Result<(), wgpu::SurfaceError> {
         if !self.is_surface_configured {
             return Ok(());
         }
@@ -285,7 +244,7 @@ impl State {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-            render_pass.draw(0..3, 0..1)
+            render_pass.draw(0..(PIXEL_COUNT as u32), 0..1);
         }
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -366,29 +325,27 @@ impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
             None => return,
         };
 
-        if let Ok(event) = self.output_rx.try_recv() {
-            match event {
-                AhoyOutputEvent::NewFrame(frame) => {
-                    println!("Frame: {:?}", frame);
-                    let _ = state.draw_frame(frame);
-                }
-            }
-        }
-
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => state.resize(size.width, size.height),
             WindowEvent::RedrawRequested => {
-                match state.render() {
-                    Ok(_) => {}
-                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                        let size = state.window.inner_size();
-                        state.resize(size.width, size.height);
+                if let Ok(event) = self.output_rx.try_recv() {
+                    match event {
+                        AhoyOutputEvent::NewFrame(frame) => {
+                            println!("Frame: {:?}", frame);
+                            match state.draw_frame(frame) {
+                                Ok(_) => {}
+                                Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                                    let size = state.window.inner_size();
+                                    state.resize(size.width, size.height);
+                                }
+                                Err(e) => {
+                                    log::error!("Unable to render {}", e);
+                                }
+                            };
+                        }
                     }
-                    Err(e) => {
-                        log::error!("Unable to render {}", e);
-                    }
-                };
+                }
             }
             _ => (),
         }
