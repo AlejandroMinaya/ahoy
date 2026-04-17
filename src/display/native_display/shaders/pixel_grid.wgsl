@@ -9,7 +9,6 @@ struct VSOutput {
     @location(0) enabled: u32
 }
 
-const size = 10;
 const quad = array(
     vec2f(-1., -1.),
     vec2f(1., -1.),
@@ -27,12 +26,13 @@ const dimensions = vec2f(32., 16.);
 
     var vs_output: VSOutput;
     let pixel_coordinates = vec2f(f32(v.x), f32(v.y)) - dimensions;
-    // let quad_offset = vec2f(quad[v_idx].x * dimensions.x, quad[v_idx].y * dimensions.y);
 
     let normalized_position = vec2f(pixel_coordinates.x/dimensions.x, pixel_coordinates.y/dimensions.y);
     let normalized_quad_position = vec2f(quad[v_idx].x/dimensions.x, quad[v_idx].y/dimensions.y);
-    vs_output.position = vec4f(normalized_position - normalized_quad_position, 1, 1);
+
+    vs_output.position = vec4f(normalized_position + normalized_quad_position, 1, 1);
     vs_output.enabled = v.enabled;
+
     return vs_output;
 
 }

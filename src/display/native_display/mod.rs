@@ -39,13 +39,12 @@ fn to_vertices(frame: &AhoyFrame) -> Pixels {
     let mut pixel_idx = 0;
     for (row_number, row) in frame.iter().enumerate() {
         for col in 0_usize..DISPLAY_WIDTH {
-            let x = col as u8;
+            let x = (DISPLAY_WIDTH - 1 - col) as u8;
             let y = row_number as u8;
             let enabled = ((row >> col) & 0b1) as u8;
             pixels[pixel_idx] = x;
             pixels[pixel_idx + 1] = y;
             pixels[pixel_idx + 2] = enabled;
-            pixels[pixel_idx + 3] = 253;
             pixel_idx += 4;
         }
     }
