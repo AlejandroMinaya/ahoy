@@ -37,8 +37,9 @@ const dimensions = vec2f(32., 16.);
 }
 
 @fragment fn fs(vs_output: VSOutput) -> @location(0) vec4f {
-    if vs_output.enabled > 0{
-        return vec4f(0.039216, 0.305882, 0.2523, 1);
+    let color = vec4f(0.709804, 0.282353, 0, 1);
+    if vs_output.enabled > 0 {
+        return color;
     }
-    return vec4f(0);
+    return vec4f(color.xyz * .1, 1);
 }
