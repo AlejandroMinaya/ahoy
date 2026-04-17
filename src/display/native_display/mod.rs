@@ -6,7 +6,11 @@ use std::{
     vec,
 };
 
-use wgpu::{BufferDescriptor, BufferUsages, Face, VertexAttribute, VertexFormat};
+use wgpu::{
+    Backends, BufferDescriptor, BufferUsages, Device, Face, Instance, InstanceDescriptor,
+    PowerPreference, Queue, RenderPipeline, RequestAdapterOptions, Surface, SurfaceConfiguration,
+    VertexAttribute, VertexFormat,
+};
 use winit::{
     application::ApplicationHandler,
     event::*,
@@ -25,12 +29,12 @@ const VERTEX_BUFFER_LEN: usize = PIXEL_COUNT * 4;
 type Pixels = [u8; VERTEX_BUFFER_LEN];
 
 pub struct State {
-    surface: wgpu::Surface<'static>,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    config: wgpu::SurfaceConfiguration,
+    surface: Surface<'static>,
+    device: Device,
+    queue: Queue,
+    config: SurfaceConfiguration,
     is_surface_configured: bool,
-    render_pipeline: wgpu::RenderPipeline,
+    render_pipeline: RenderPipeline,
     window: Arc<Window>,
     current_frame: Option<AhoyFrame>,
 }
@@ -57,16 +61,16 @@ impl State {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
         let size = window.inner_size();
 
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::PRIMARY,
+        let instance = Instance::new(&InstanceDescriptor {
+            backends: Backends::PRIMARY,
             ..Default::default()
         });
 
         let surface = instance.create_surface(window.clone()).unwrap();
 
         let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::default(),
+            .request_adapter(&RequestAdapterOptions {
+                power_preference: PowerPreference::default(),
                 compatible_surface: Some(&surface),
                 force_fallback_adapter: false,
             })
@@ -94,7 +98,7 @@ impl State {
             .copied()
             .unwrap_or(surface_capabilities.formats[0]);
 
-        let config = wgpu::SurfaceConfiguration {
+        let config = SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface_format,
             width: size.width,
