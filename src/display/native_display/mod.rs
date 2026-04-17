@@ -287,7 +287,10 @@ impl AhoyIO for NativeIO {
 
 impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let window_attributes = Window::default_attributes();
+        let window_attributes = Window::default_attributes()
+            .with_title("Ahoy")
+            .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
+            .with_decorations(false);
 
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
         {
