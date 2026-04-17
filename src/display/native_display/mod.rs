@@ -333,7 +333,7 @@ impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
                             match state.draw_frame(frame) {
                                 Ok(_) => {
                                     //println!("Frame: {:?}", frame);
-                                    println!("Vertices: {:?}", to_vertices(&frame));
+                                    //println!("Vertices: {:?}", to_vertices(&frame));
                                 }
                                 Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
                                     print!("Surface Error");
