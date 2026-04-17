@@ -6,7 +6,7 @@ use std::{
     vec,
 };
 
-use wgpu::{BufferDescriptor, BufferUsages, VertexAttribute, VertexFormat};
+use wgpu::{BufferDescriptor, BufferUsages, Face, VertexAttribute, VertexFormat};
 use winit::{
     application::ApplicationHandler,
     event::*,
@@ -37,15 +37,15 @@ type Pixels = [u8; VERTEX_BUFFER_LEN];
 fn to_vertices(frame: &AhoyFrame) -> Pixels {
     let mut pixels: Pixels = [0; VERTEX_BUFFER_LEN];
     let mut pixel_idx = 0;
-    for (idx, row) in frame.iter().enumerate() {
+    for (row_number, row) in frame.iter().enumerate() {
         for col in 0_usize..DISPLAY_WIDTH {
             let x = col as u8;
-            let y = idx as u8;
-            let enabled = ((row >> col) & 1) as u8;
+            let y = row_number as u8;
+            let enabled = ((row >> col) & 0b1) as u8;
             pixels[pixel_idx] = x;
             pixels[pixel_idx + 1] = y;
             pixels[pixel_idx + 2] = enabled;
-            pixels[pixel_idx + 3] = 0;
+            pixels[pixel_idx + 3] = 253;
             pixel_idx += 4;
         }
     }
@@ -162,8 +162,8 @@ impl State {
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
-                front_face: wgpu::FrontFace::Cw,
-                cull_mode: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(Face::Back),
                 polygon_mode: wgpu::PolygonMode::Fill,
                 unclipped_depth: false,
                 conservative: false,
@@ -202,7 +202,6 @@ impl State {
 
     pub fn draw_frame(&mut self, frame: AhoyFrame) -> Result<(), wgpu::SurfaceError> {
         self.window.request_redraw();
-
         if !self.is_surface_configured {
             return Ok(());
         }
@@ -332,9 +331,11 @@ impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
                 if let Ok(event) = self.output_rx.try_recv() {
                     match event {
                         AhoyOutputEvent::NewFrame(frame) => {
-                            // println!("Frame: {:?}", frame);
                             match state.draw_frame(frame) {
-                                Ok(_) => {}
+                                Ok(_) => {
+                                    //println!("Frame: {:?}", frame);
+                                    println!("Vertices: {:?}", to_vertices(&frame));
+                                }
                                 Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
                                     print!("Surface Error");
                                     let size = state.window.inner_size();
