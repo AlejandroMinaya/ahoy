@@ -1,17 +1,24 @@
-use std::sync::Arc;
+use std::{
+    sync::{
+        Arc,
+        mpsc::{Receiver, Sender},
+    },
+    vec,
+};
 
+use wgpu::{BufferDescriptor, BufferUsages, Face, VertexAttribute, VertexFormat};
 use winit::{
     application::ApplicationHandler,
     event::*,
     event_loop::{ActiveEventLoop, EventLoop},
-    keyboard::{self, KeyCode, PhysicalKey},
     window::Window,
 };
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+use crate::display::{
+    AhoyFrame, AhoyInputEvent, AhoyOutputEvent, DISPLAY_HEIGHT, DISPLAY_WIDTH, PIXEL_COUNT,
+};
 
-use super::AhoyDisplay;
+use super::AhoyIO;
 
 pub struct State {
     surface: wgpu::Surface<'static>,
@@ -21,6 +28,28 @@ pub struct State {
     is_surface_configured: bool,
     render_pipeline: wgpu::RenderPipeline,
     window: Arc<Window>,
+    current_frame: Option<AhoyFrame>,
+}
+
+const VERTEX_BUFFER_LEN: usize = PIXEL_COUNT * 4;
+type Pixels = [u8; VERTEX_BUFFER_LEN];
+
+fn to_vertices(frame: &AhoyFrame) -> Pixels {
+    let mut pixels: Pixels = [0; VERTEX_BUFFER_LEN];
+    let mut pixel_idx = 0;
+    for (row_number, row) in frame.iter().enumerate() {
+        for col in 0_usize..DISPLAY_WIDTH {
+            let x = (DISPLAY_WIDTH - 1 - col) as u8;
+            let y = (DISPLAY_HEIGHT - 1 - row_number) as u8;
+            let enabled = ((row >> col) & 0b1) as u8;
+            pixels[pixel_idx] = x;
+            pixels[pixel_idx + 1] = y;
+            pixels[pixel_idx + 2] = enabled;
+            pixel_idx += 4;
+        }
+    }
+
+    pixels
 }
 
 impl State {
@@ -30,8 +59,6 @@ impl State {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             #[cfg(not(target_arch = "wasm32"))]
             backends: wgpu::Backends::PRIMARY,
-            #[cfg(target_arch = "wasm32")]
-            backends: wgpu::Backends::GL,
             ..Default::default()
         });
 
@@ -78,7 +105,7 @@ impl State {
             desired_maximum_frame_latency: 2,
         };
 
-        let shader = device.create_shader_module(wgpu::include_wgsl!("shaders/shader.wgsl"));
+        let shader = device.create_shader_module(wgpu::include_wgsl!("shaders/pixel_grid.wgsl"));
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -88,17 +115,42 @@ impl State {
             });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
+            label: Some("Pixel Grid Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: Some("vs_main"),
-                buffers: &[],
+                entry_point: Some("vs"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: 4,
+                    step_mode: wgpu::VertexStepMode::Instance,
+                    attributes: &[
+                        VertexAttribute {
+                            format: wgpu::VertexFormat::Uint8,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        VertexAttribute {
+                            format: wgpu::VertexFormat::Uint8,
+                            offset: 1,
+                            shader_location: 1,
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Uint8,
+                            offset: 2,
+                            shader_location: 2,
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Uint8,
+                            offset: 3,
+                            shader_location: 4,
+                        },
+                    ],
+                }],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: Some("fs_main"),
+                entry_point: Some("fs"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: config.format,
                     blend: Some(wgpu::BlendState::REPLACE),
@@ -110,7 +162,7 @@ impl State {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
+                cull_mode: Some(Face::Back),
                 polygon_mode: wgpu::PolygonMode::Fill,
                 unclipped_depth: false,
                 conservative: false,
@@ -133,23 +185,22 @@ impl State {
             window,
             render_pipeline,
             is_surface_configured: false,
+            current_frame: None,
         })
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
-        if width > 0 && height > 0 {
-            self.config.width = width;
-            self.config.height = height;
-            self.surface.configure(&self.device, &self.config);
-            self.is_surface_configured = true;
+        if width == 0 || height == 0 {
+            return;
         }
+        self.config.width = width;
+        self.config.height = height;
+        self.surface.configure(&self.device, &self.config);
+        self.is_surface_configured = true;
     }
 
-    pub fn update(&mut self) {}
-
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn draw_frame(&mut self, frame: AhoyFrame) -> Result<(), wgpu::SurfaceError> {
         self.window.request_redraw();
-
         if !self.is_surface_configured {
             return Ok(());
         }
@@ -161,12 +212,20 @@ impl State {
 
         let mut encoder = self
             .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Render Encoder"),
-            });
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+        let vertices = to_vertices(&frame);
+        let vertex_buffer = self.device.create_buffer(&BufferDescriptor {
+            label: None,
+            size: VERTEX_BUFFER_LEN as u64,
+            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        self.queue.write_buffer(&vertex_buffer, 0, &vertices);
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
+                label: None,
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     resolve_target: None,
@@ -182,7 +241,8 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+            render_pass.draw(0..6, 0..(PIXEL_COUNT as u32));
         }
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -192,106 +252,64 @@ impl State {
     }
 }
 
-pub struct NativeDisplay {
-    #[cfg(target_arch = "wasm32")]
-    proxy: Option<winit::event_loop::EventLoopProxy<State>>,
+pub struct NativeIO {
     state: Option<State>,
+    input_tx: Sender<AhoyInputEvent>,
+    output_rx: Receiver<AhoyOutputEvent>,
 }
 
-impl NativeDisplay {
-    pub fn new() -> anyhow::Result<Self> {
+impl AhoyIO for NativeIO {
+    fn connect_new(input_tx: Sender<AhoyInputEvent>, output_rx: Receiver<AhoyOutputEvent>) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
             env_logger::init();
         }
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            console_error_panic_hook::set_once();
-            console_log::init_with_level(log::Level::Info).unwrap_throw();
+        Self {
+            state: None,
+            input_tx,
+            output_rx,
         }
+    }
 
+    fn start(&mut self) -> anyhow::Result<()> {
         let event_loop = EventLoop::with_user_event().build()?;
 
-        #[cfg(target_arch = "wasm32")]
-        let proxy = Some(event_loop.create_proxy());
-        let mut display = Self {
-            state: None,
-            #[cfg(target_arch = "wasm32")]
-            proxy,
-        };
+        event_loop.run_app(self)?;
 
-        event_loop.run_app(&mut display)?;
-        Ok(display)
+        Ok(())
     }
-}
 
-impl AhoyDisplay for NativeDisplay {
-    fn draw(&mut self, frame: &super::AhoyFrame) -> anyhow::Result<()> {
+    fn draw(&mut self, _frame: &super::AhoyFrame) -> anyhow::Result<()> {
         Ok(())
     }
 }
 
-impl ApplicationHandler<State> for NativeDisplay {
+impl ApplicationHandler<AhoyOutputEvent> for NativeIO {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        #[allow(unused_mut)]
-        let mut window_attributes = Window::default_attributes();
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            use wasm_bindgen::JsCast;
-            use winit::platform::web::WindowAttributesExtWebSys;
-
-            const CANVAS_ID: &str = "canvas";
-
-            let window = wgpu::web_sys::window().unwrap_throw();
-            let document = window.document().unwrap_throw();
-            let canvas = document.get_element_by_id(CANVAS_ID).unwrap_throw();
-            let html_canvas_element = canvas.unchecked_into();
-            window_attributes = window_attributes.with_canvas(Some(html_canvas_element));
-        }
+        let window_attributes = Window::default_attributes();
 
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
-
-        #[cfg(not(target_arch = "wasm32"))]
         {
-            // If we are not on web we can use pollster to
-            // await the
             self.state = Some(pollster::block_on(State::new(window)).unwrap());
         }
+    }
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            // Run the future asynchronously and use the
-            // proxy to send the results to the event loop
-            if let Some(proxy) = self.proxy.take() {
-                wasm_bindgen_futures::spawn_local(async move {
-                    assert!(
-                        proxy
-                            .send_event(
-                                State::new(window)
-                                    .await
-                                    .expect("Unable to create canvas!!!")
-                            )
-                            .is_ok()
-                    )
-                });
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: AhoyOutputEvent) {
+        if let Some(state) = &mut self.state {
+            match event {
+                AhoyOutputEvent::NewFrame(frame) => {
+                    state.current_frame = Some(frame);
+                    print!("{frame:?}");
+                }
             }
         }
     }
 
-    #[allow(unused_mut)]
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: State) {
-        // This is where proxy.send_event() ends up
-        #[cfg(target_arch = "wasm32")]
-        {
-            event.window.request_redraw();
-            event.resize(
-                event.window.inner_size().width,
-                event.window.inner_size().height,
-            );
+    fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
+        if self.input_tx.send(AhoyInputEvent::TurnOff).is_err() {
+            panic!("oh oh")
         }
-        self.state = Some(event);
     }
 
     fn window_event(
@@ -309,30 +327,27 @@ impl ApplicationHandler<State> for NativeDisplay {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => state.resize(size.width, size.height),
             WindowEvent::RedrawRequested => {
-                state.update();
-                match state.render() {
-                    Ok(_) => {}
-                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                        let size = state.window.inner_size();
-                        state.resize(size.width, size.height);
+                if let Ok(event) = self.output_rx.try_recv() {
+                    match event {
+                        AhoyOutputEvent::NewFrame(frame) => {
+                            match state.draw_frame(frame) {
+                                Ok(_) => {
+                                    //println!("Frame: {:?}", frame);
+                                    //println!("Vertices: {:?}", to_vertices(&frame));
+                                }
+                                Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                                    print!("Surface Error");
+                                    let size = state.window.inner_size();
+                                    state.resize(size.width, size.height);
+                                }
+                                Err(e) => {
+                                    print!("Unable to render {}", e);
+                                }
+                            };
+                        }
                     }
-                    Err(e) => {
-                        log::error!("Unable to render {}", e);
-                    }
-                };
+                }
             }
-            WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        physical_key: PhysicalKey::Code(code),
-                        state: key_state,
-                        ..
-                    },
-                ..
-            } => match (code, key_state.is_pressed()) {
-                (KeyCode::Space, true) => println!("lol"),
-                (_, _) => event_loop.exit(),
-            },
             _ => (),
         }
     }

@@ -1,9 +1,13 @@
+use std::sync::mpsc::{Receiver, Sender};
+
 use ratatui::{
     style::Color,
     widgets::canvas::{Canvas, Rectangle},
 };
 
-use super::{AhoyDisplay, AhoyFrame, DISPLAY_HEIGHT, DISPLAY_WIDTH, Size};
+use crate::display::{AhoyInputEvent, AhoyOutputEvent};
+
+use super::{AhoyFrame, AhoyIO, DISPLAY_HEIGHT, DISPLAY_WIDTH, Size};
 
 pub struct RatatuiAhoyDisplay {
     terminal: ratatui::DefaultTerminal,
@@ -21,7 +25,7 @@ impl Drop for RatatuiAhoyDisplay {
     }
 }
 
-impl AhoyDisplay for RatatuiAhoyDisplay {
+impl AhoyIO for RatatuiAhoyDisplay {
     fn draw(&mut self, frame: &AhoyFrame) -> anyhow::Result<()> {
         let rectangle_size = Size::new(1.0, 1.0);
         let display_size = Size::new(
@@ -57,5 +61,13 @@ impl AhoyDisplay for RatatuiAhoyDisplay {
             );
         })?;
         Ok(())
+    }
+
+    fn connect_new(input_tx: Sender<AhoyInputEvent>, output_rx: Receiver<AhoyOutputEvent>) -> Self {
+        todo!()
+    }
+
+    fn start(&mut self) -> anyhow::Result<()> {
+        todo!()
     }
 }

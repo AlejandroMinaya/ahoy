@@ -3,6 +3,7 @@ struct VertexOutput {
     @location(0) vert_pos: vec3<f32>,
     @location(1) color: vec4<f32>,
 };
+const size = 10.;
 
 @vertex
 fn vs_main(
