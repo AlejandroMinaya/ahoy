@@ -20,6 +20,10 @@ use crate::display::{
 
 use super::AhoyIO;
 
+const VERTEX_BUFFER_LEN: usize = PIXEL_COUNT * 4;
+
+type Pixels = [u8; VERTEX_BUFFER_LEN];
+
 pub struct State {
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
@@ -30,9 +34,6 @@ pub struct State {
     window: Arc<Window>,
     current_frame: Option<AhoyFrame>,
 }
-
-const VERTEX_BUFFER_LEN: usize = PIXEL_COUNT * 4;
-type Pixels = [u8; VERTEX_BUFFER_LEN];
 
 fn to_vertices(frame: &AhoyFrame) -> Pixels {
     let mut pixels: Pixels = [0; VERTEX_BUFFER_LEN];
@@ -57,7 +58,6 @@ impl State {
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            #[cfg(not(target_arch = "wasm32"))]
             backends: wgpu::Backends::PRIMARY,
             ..Default::default()
         });

@@ -12,6 +12,9 @@ use clap::Parser;
 
 use crate::display::{AhoyInputEvent, AhoyOutputEvent};
 
+const FPS_LIMIT: u64 = 60;
+const MS_PER_FRAME: Duration = Duration::from_millis(1_000 / FPS_LIMIT);
+
 #[derive(Parser)]
 struct Args {
     #[arg()]
@@ -42,7 +45,7 @@ fn main() -> anyhow::Result<()> {
                 .send(AhoyOutputEvent::NewFrame(ahoy.current_frame))
                 .expect("Frame to be sent");
 
-            sleep(Duration::from_millis(16));
+            sleep(MS_PER_FRAME);
         }
     });
     let _ = ahoyio.start();
