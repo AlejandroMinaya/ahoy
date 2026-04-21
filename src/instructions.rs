@@ -13,6 +13,7 @@ pub enum AhoyInstruction {
     },
     ClearScreen = 0x00E0,
     StopSubroutine = 0x00EE,
+    SkipIfEqual(usize, u8),
     UnknownInstruction(u16),
 }
 

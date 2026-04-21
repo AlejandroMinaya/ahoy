@@ -405,4 +405,14 @@ mod tests {
 
         assert_eq!(ahoy.index, 1023_usize);
     }
+
+    #[test]
+    fn instruction_increases_the_pc_if_value_matches_register() {
+        let mut ahoy = Ahoy::default();
+        ahoy.registers[0xB] = 12;
+
+        ahoy.execute(AhoyInstruction::SkipIfEqual(0xB, 12)).unwrap();
+
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START + 2);
+    }
 }
