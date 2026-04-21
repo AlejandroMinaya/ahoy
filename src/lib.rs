@@ -100,7 +100,7 @@ impl Ahoy {
             }
             AhoyInstruction::SkipIfEqual(register_addr, value) => {
                 if self.registers[register_addr] == value {
-                    self.counter += 2;
+                    self.counter = ((self.counter + 2) % MAX_MEMORY).max(PROGRAM_MEMORY_START);
                 }
             }
             AhoyInstruction::SetRegister(register_addr, value) => {
@@ -427,6 +427,19 @@ mod tests {
         ahoy.registers[0xB] = 12;
 
         ahoy.execute(AhoyInstruction::SkipIfEqual(0xB, 21)).unwrap();
+
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START);
+    }
+    #[test]
+    fn instruction_loops_back_counter_to_zero_when_overflowing() {
+        let mut ahoy = Ahoy {
+            counter: 4094,
+            ..Default::default()
+        };
+
+        ahoy.registers[0xB] = 12;
+
+        ahoy.execute(AhoyInstruction::SkipIfEqual(0xB, 12)).unwrap();
 
         assert_eq!(ahoy.counter, PROGRAM_MEMORY_START);
     }
