@@ -83,7 +83,8 @@ impl Ahoy {
         let instruction = (first_nibble << 8) | second_nibble;
         debug!("FETCH > INSTRUCTION: {:X?}", instruction);
 
-        self.counter = ((self.counter + 2) % MAX_MEMORY).max(PROGRAM_MEMORY_START);
+        self.point_to_next_instruction();
+
         instruction
     }
 
@@ -100,7 +101,7 @@ impl Ahoy {
             }
             AhoyInstruction::SkipIfEqual(register_addr, value) => {
                 if self.registers[register_addr] == value {
-                    self.counter = ((self.counter + 2) % MAX_MEMORY).max(PROGRAM_MEMORY_START);
+                    self.point_to_next_instruction();
                 }
             }
             AhoyInstruction::SetRegister(register_addr, value) => {
@@ -140,6 +141,10 @@ impl Ahoy {
             _ => debug!("Ignoring this instruction: {:X?}", instruction),
         };
         Ok(())
+    }
+
+    fn point_to_next_instruction(&mut self) {
+        self.counter = ((self.counter + 2) % MAX_MEMORY).max(PROGRAM_MEMORY_START);
     }
 }
 
