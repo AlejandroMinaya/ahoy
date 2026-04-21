@@ -98,6 +98,9 @@ impl Ahoy {
             AhoyInstruction::SetIndex(value) => {
                 self.index = value as usize;
             }
+            AhoyInstruction::SkipIfEqual(register_addr, value) => {
+                self.counter += 2;
+            }
             AhoyInstruction::SetRegister(register_addr, value) => {
                 self.registers[register_addr] = value;
             }

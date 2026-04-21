@@ -35,6 +35,10 @@ impl From<u16> for AhoyInstruction {
             instruction => match instruction >> 0xC {
                 1 => Self::Jump((instruction & 0x0FFF) as usize),
                 2 => Self::CallSubroutine(instruction & 0x0FFF),
+                3 => {
+                    let (addr, value) = instruction.into_regsiter_instruction();
+                    Self::SkipIfEqual(addr as usize, value)
+                }
                 6 => {
                     let (addr, value) = instruction.into_regsiter_instruction();
                     Self::SetRegister(addr as usize, value)
