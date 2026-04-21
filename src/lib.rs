@@ -99,7 +99,9 @@ impl Ahoy {
                 self.index = value as usize;
             }
             AhoyInstruction::SkipIfEqual(register_addr, value) => {
-                self.counter += 2;
+                if self.registers[register_addr] == value {
+                    self.counter += 2;
+                }
             }
             AhoyInstruction::SetRegister(register_addr, value) => {
                 self.registers[register_addr] = value;
@@ -410,12 +412,22 @@ mod tests {
     }
 
     #[test]
-    fn instruction_increases_the_pc_if_value_matches_register() {
+    fn instruction_increases_counter_if_value_matches_register() {
         let mut ahoy = Ahoy::default();
         ahoy.registers[0xB] = 12;
 
         ahoy.execute(AhoyInstruction::SkipIfEqual(0xB, 12)).unwrap();
 
         assert_eq!(ahoy.counter, PROGRAM_MEMORY_START + 2);
+    }
+
+    #[test]
+    fn instruction_doesnt_increase_counter_if_value_matches_register() {
+        let mut ahoy = Ahoy::default();
+        ahoy.registers[0xB] = 12;
+
+        ahoy.execute(AhoyInstruction::SkipIfEqual(0xB, 21)).unwrap();
+
+        assert_eq!(ahoy.counter, PROGRAM_MEMORY_START);
     }
 }
